@@ -5,7 +5,6 @@
 [![Minecraft](https://img.shields.io/badge/Minecraft-1.16.5--26.2-brightgreen?style=flat-square)](https://papermc.io/)
 [![Java](https://img.shields.io/badge/Java-17%20%7C%2021-orange?style=flat-square&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
 [![Build](https://img.shields.io/badge/Build-Maven-blue?style=flat-square&logo=apachemaven&logoColor=white)](https://maven.apache.org/)
-[![PlaceholderAPI](https://img.shields.io/badge/PlaceholderAPI-Supported-blueviolet?style=flat-square)](https://placeholderapi.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Paper%20%7C%20Purpur%20%7C%20Spigot%20%7C%20Bukkit-purple?style=flat-square)](https://papermc.io/)
 
