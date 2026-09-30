@@ -1,0 +1,165 @@
+# ============================================================================== #
+#                     AnarchySpawn - English Language File (en_US)               #
+# ============================================================================== #
+
+prefix: "&#FF5555&l[&#FFAA00AnarchySpawn&#FF5555&l] &r"
+
+spawn:
+  # Primary chat announcement (Placeholders: {player}, {world}, {x}, {y}, {z}, {distance}, {biome}, {direction}, {seconds})
+  first-join-chat: "&#55FF55Welcome to the server! Your spawn coordinates: &#FFFF55X: {x} Y: {y} Z: {z} &#AAAAAA(Biome: &f{biome} &#AAAAAA| Center Dist: &#55FF55{distance}&#AAAAAAm)"
+  respawn-chat: "&#FFAA00You safely respawned in &f{world}&#FFAA00 at &#FFFF55X: {x} Y: {y} Z: {z} &#AAAAAA(Biome: &f{biome} &#AAAAAA| Center Dist: &#55FF55{distance}&#AAAAAAm)"
+  protection-started: "&#55FFFFSpawn protection enabled for {seconds} seconds."
+  protection-ended: "&#FF5555Spawn protection has expired. Stay safe!"
+
+  # Detailed Location Card Report (Multi-line list supported, set to [] to disable)
+  respawn-location-info:
+    - "&6&l=========================================="
+    - "&e  ▶ &6&lSafe Respawn Location Report"
+    - "&7  • World: &f{world}"
+    - "&7  • Coordinates: &#FFFF55X: {x} &7| &#FFFF55Y: {y} &7| &#FFFF55Z: {z}"
+    - "&7  • Biome: &#55FFFF{biome} &7(Facing: &#FFFF55{direction}&7)"
+    - "&7  • Distance to Center: &#55FF55{distance} &7blocks"
+    - "&7  • Invulnerability: &#55FFFF{seconds} &7seconds"
+    - "&6&l=========================================="
+
+  first-join-location-info:
+    - "&a&l=========================================="
+    - "&e  ▶ &a&lInitial Spawn Location Report"
+    - "&7  • World: &f{world}"
+    - "&7  • Coordinates: &#FFFF55X: {x} &7| &#FFFF55Y: {y} &7| &#FFFF55Z: {z}"
+    - "&7  • Biome: &#55FFFF{biome} &7(Facing: &#FFFF55{direction}&7)"
+    - "&7  • Distance to Center: &#55FF55{distance} &7blocks"
+    - "&7  • Newbie Protection: &#55FFFF{seconds} &7seconds"
+    - "&a&l=========================================="
+
+  # Fallback Warning (Shown when random safe search fails/times out and uses fallback coordinates)
+  fallback-warning: "&#FF5555Warning: Could not locate a safe random point in time. Teleported to world fallback spawn."
+
+  # Actionbar Display (Falls back to 'actionbar' if empty or not defined)
+  actionbar-first-join: "&#55FF55First Spawn: &#FFFF55{x}, {y}, {z} &7({world} - {biome})"
+  actionbar-respawn: "&#FFAA00Respawn Pos: &#FFFF55{x}, {y}, {z} &7({world} - {biome} | Center Dist: &#55FF55{distance}&7m)"
+  actionbar: "&#55FF55Spawn Position: &#FFFF55{x}, {y}, {z} &7({world})"
+
+  # Server-wide Broadcasts (Leave as "" to disable)
+  broadcast-first-join: ""
+  broadcast-respawn: ""
+
+  # Admin Notification (Sent to players with permission 'anarchyspawn.admin', leave "" to disable)
+  admin-notify-respawn: "&7[&#FFAA00Respawn-Monitor&7] Player &f{player} &7respawned at &f{world} &#FFFF55({x}, {y}, {z}) &7(Biome: &f{biome}&7)"
+
+  # Server Console Logs (Logged in server console / log files)
+  server-log-first-join: "[First Spawn] Player {player} initially spawned in {world} at X:{x} Y:{y} Z:{z} (Biome: {biome}, Distance: {distance}m)"
+  server-log-respawn: "[Respawn] Player {player} safely respawned in {world} at X:{x} Y:{y} Z:{z} (Biome: {biome}, Distance: {distance}m)"
+
+  # Title & Subtitle Display
+  title-first-join: "&#FFAA00&lWelcome"
+  subtitle-first-join: "&#AAAAAAWorld: &f{world} &#AAAAAA| Pos: &#FFFF55{x}, {z} &#AAAAAA| Biome: &#55FFFF{biome}"
+  
+  title-respawn: "&#FFAA00&lRespawned"
+  subtitle-respawn: "&#AAAAAAWorld: &f{world} &#AAAAAA| Pos: &#FFFF55{x}, {z} &#AAAAAA| Biome: &#55FFFF{biome}"
+
+command:
+  no-permission: "&#FF5555You do not have permission to use this command."
+  player-only: "&#FF5555This command can only be executed by players in-game."
+  reload-success: "&#55FF55Configuration and language files reloaded (&f{worlds_count}&#55FF55 worlds active)."
+  player-not-found: "&#FF5555Player not found: &f{target}"
+  world-not-found: "&#FF5555World &f{world}&#FF5555 does not exist or random spawn is disabled."
+  setcenter-success: "&#55FF55Center coordinates for world &f{world}&#55FF55 updated to: &#FFFF55X: {x}, Z: {z}"
+  usage-setcenter: "&#FF5555Usage: &f/{label} setcenter <world> <x> <z>"
+  invalid-number: "&#FF5555Error: X and Z coordinates must be valid numbers."
+  tp-success: "&#55FF55Teleported player &f{player}&#55FF55 to: &#FFFF55X: {x} Y: {y} Z: {z} &7({world})"
+  tp-searching: "&#AAAAAASearching for a suitable safe location..."
+  tp-failed: "&#FF5555No safe location found. Teleported to fallback location."
+  
+  test-header: "&#FFAA00========== [ AnarchySpawn Location Benchmark ] =========="
+  test-searching: "&7Benchmarking safe location search in world &f{world}&7..."
+  test-result: "&#55FF55Benchmark Success! Time: &#FFFF55{time_ms}ms &#55FF55| Attempts: &#FFFF55{attempts} &#55FF55| Pos: &#FFFF55{x}, {y}, {z} &#55FF55| Biome: &#FFFF55{biome}"
+  test-failed: "&#FF5555Benchmark Failed! No safe location found after {attempts} attempts."
+  
+  info-header: "&#FFAA00========== [ AnarchySpawn Status ] =========="
+  info-world: "&e- World &f{world}&e: Status: {status} | Radius: &f{min_radius}&e~&f{max_radius} blocks &e| Pre-cached: &a{pool_size}&e/&a{target_size}"
+  info-cache-refreshed: "&#55FF55Pre-cached location pools refilled for all active worlds!"
+
+  help-header: "&6====== &#FFAA00&lAnarchySpawn Help Menu &6======"
+  help-reload: "&e/{label} reload &7- Reload configuration and language files"
+  help-tp: "&e/{label} tp [player] [world] &7- Teleport player to a safe random location"
+  help-setcenter: "&e/{label} setcenter <world> <x> <z> &7- Set random spawn center coordinates"
+  help-info: "&e/{label} info &7- View status of all worlds and cached spawn pools"
+  help-test: "&e/{label} test [world] &7- Benchmark location search algorithm speed"
+  help-cache: "&e/{label} cache &7- Refill pre-cached safe spawn pools immediately"
+
+# Biome names dictionary
+biomes:
+  PLAINS: "Plains"
+  SUNFLOWER_PLAINS: "Sunflower Plains"
+  SNOWY_PLAINS: "Snowy Plains"
+  ICE_SPIKES: "Ice Spikes"
+  DESERT: "Desert"
+  SWAMP: "Swamp"
+  MANGROVE_SWAMP: "Mangrove Swamp"
+  FOREST: "Forest"
+  FLOWER_FOREST: "Flower Forest"
+  BIRCH_FOREST: "Birch Forest"
+  DARK_FOREST: "Dark Forest"
+  OLD_GROWTH_BIRCH_FOREST: "Old Growth Birch Forest"
+  OLD_GROWTH_PINE_TAIGA: "Old Growth Pine Taiga"
+  OLD_GROWTH_SPRUCE_TAIGA: "Old Growth Spruce Taiga"
+  TAIGA: "Taiga"
+  SNOWY_TAIGA: "Snowy Taiga"
+  SAVANNA: "Savanna"
+  SAVANNA_PLATEAU: "Savanna Plateau"
+  WINDSWEPT_HILLS: "WindswePT Hills"
+  WINDSWEPT_GRAVELLY_HILLS: "Windswept Gravelly Hills"
+  WINDSWEPT_FOREST: "Windswept Forest"
+  WINDSWEPT_SAVANNA: "Windswept Savanna"
+  JUNGLE: "Jungle"
+  SPARSE_JUNGLE: "Sparse Jungle"
+  BAMBOO_JUNGLE: "Bamboo Jungle"
+  BADLANDS: "Badlands"
+  ERODED_BADLANDS: "Eroded Badlands"
+  WOODED_BADLANDS: "Wooded Badlands"
+  MEADOW: "Meadow"
+  CHERRY_GROVE: "Cherry Grove"
+  GROVE: "Grove"
+  SNOWY_SLOPES: "Snowy Slopes"
+  FROZEN_PEAKS: "Frozen Peaks"
+  JAGGED_PEAKS: "Jagged Peaks"
+  STONY_PEAKS: "Stony Peaks"
+  RIVER: "River"
+  FROZEN_RIVER: "Frozen River"
+  BEACH: "Beach"
+  SNOWY_BEACH: "Snowy Beach"
+  STONY_SHORE: "Stony Shore"
+  WARM_OCEAN: "Warm Ocean"
+  LUKEWARM_OCEAN: "Lukewarm Ocean"
+  DEEP_LUKEWARM_OCEAN: "Deep Lukewarm Ocean"
+  OCEAN: "Ocean"
+  DEEP_OCEAN: "Deep Ocean"
+  COLD_OCEAN: "Cold Ocean"
+  DEEP_COLD_OCEAN: "Deep Cold Ocean"
+  FROZEN_OCEAN: "Frozen Ocean"
+  DEEP_FROZEN_OCEAN: "Deep Frozen Ocean"
+  MUSHROOM_FIELDS: "Mushroom Fields"
+  DRIPSTONE_CAVES: "Dripstone Caves"
+  LUSH_CAVES: "Lush Caves"
+  DEEP_DARK: "Deep Dark"
+  NETHER_WASTES: "Nether Wastes"
+  WARPED_FOREST: "Warped Forest"
+  CRIMSON_FOREST: "Crimson Forest"
+  SOUL_SAND_VALLEY: "Soul Sand Valley"
+  BASALT_DELTAS: "Basalt Deltas"
+  THE_END: "The End"
+  END_HIGHLANDS: "End Highlands"
+  END_MIDLANDS: "End Midlands"
+  SMALL_END_ISLANDS: "Small End Islands"
+  END_BARRENS: "End Barrens"
+
+directions:
+  N: "North"
+  NE: "North-East"
+  E: "East"
+  SE: "South-East"
+  S: "South"
+  SW: "South-West"
+  W: "West"
+  NW: "North-West"

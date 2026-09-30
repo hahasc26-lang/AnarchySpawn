@@ -1,0 +1,165 @@
+# ============================================================================== #
+#                   AnarchySpawn - 繁體中文語言檔案 (zh_TW)                         #
+# ============================================================================== #
+
+prefix: "&#FF5555&l[&#FFAA00AnarchySpawn&#FF5555&l] &r"
+
+spawn:
+  # 聊天欄主要提示 (可使用佔位符: {player}, {world}, {x}, {y}, {z}, {distance}, {biome}, {direction}, {seconds})
+  first-join-chat: "&#55FF55歡迎加入遊戲！你的出生點座標: &#FFFF55X: {x} Y: {y} Z: {z} &#AAAAAA(群系: &f{biome} &#AAAAAA| 距離中心: &#55FF55{distance}&#AAAAAA格)"
+  respawn-chat: "&#FFAA00你已在 &f{world} &#FFAA00安全重生，座標: &#FFFF55X: {x} Y: {y} Z: {z} &#AAAAAA(群系: &f{biome} &#AAAAAA| 距離中心: &#55FF55{distance}&#AAAAAA格)"
+  protection-started: "&#55FFFF已開啟 {seconds} 秒出生保護時間。"
+  protection-ended: "&#FF5555出生保護已結束，請注意安全。"
+
+  # 玩家重生/出生時的詳細位置卡片 (支援多行列表，若不需要可設定為空列表 [] 或註釋)
+  respawn-location-info:
+    - "&6&l=========================================="
+    - "&e  ▶ &6&l安全重生位置報告"
+    - "&7  • 所在世界: &f{world}"
+    - "&7  • 重生座標: &#FFFF55X: {x} &7| &#FFFF55Y: {y} &7| &#FFFF55Z: {z}"
+    - "&7  • 所處群系: &#55FFFF{biome} &7(朝向: &#FFFF55{direction}&7)"
+    - "&7  • 距中心點: &#55FF55{distance} &7格"
+    - "&7  • 無敵保護: &#55FFFF{seconds} &7秒"
+    - "&6&l=========================================="
+
+  first-join-location-info:
+    - "&a&l=========================================="
+    - "&e  ▶ &a&l新玩家出生位置報告"
+    - "&7  • 所在世界: &f{world}"
+    - "&7  • 出生座標: &#FFFF55X: {x} &7| &#FFFF55Y: {y} &7| &#FFFF55Z: {z}"
+    - "&7  • 所處群系: &#55FFFF{biome} &7(朝向: &#FFFF55{direction}&7)"
+    - "&7  • 距中心點: &#55FF55{distance} &7格"
+    - "&7  • 新人保護: &#55FFFF{seconds} &7秒"
+    - "&a&l=========================================="
+
+  # 備用點降級警告 (當隨機安全點搜尋超時/失敗降級至 fallback-location 時提示，留空 "" 則不提示)
+  fallback-warning: "&#FF5555警告: 未能找到合適的隨機安全位置，已將你傳送至世界備用重生點。"
+
+  # 動作欄 ActionBar 提示 (優先匹配專屬項，留空或不存在則回退至 actionbar)
+  actionbar-first-join: "&#55FF55初次出生: &#FFFF55{x}, {y}, {z} &7({world} - {biome})"
+  actionbar-respawn: "&#FFAA00重生位置: &#FFFF55{x}, {y}, {z} &7({world} - {biome} | 距離中心: &#55FF55{distance}&7格)"
+  actionbar: "&#55FF55出生位置: &#FFFF55{x}, {y}, {z} &7({world})"
+
+  # 全服廣播 (留空 "" 則不進行全服廣播)
+  broadcast-first-join: ""
+  broadcast-respawn: ""
+
+  # 管理員重生監控提示 (發送給擁有 anarchyspawn.admin 權限的管理人員，留空 "" 則不開啟)
+  admin-notify-respawn: "&7[&#FFAA00重生監控&7] 玩家 &f{player} &7在 &f{world} &#FFFF55({x}, {y}, {z}) &7重生 (群系: &f{biome}&7)"
+
+  # 伺服端控制台日誌提示 (在伺服器後台輸出的記錄文本)
+  server-log-first-join: "[初次出生] 玩家 {player} 在世界 {world} 初次出生，座標: X:{x} Y:{y} Z:{z} (群系: {biome}, 距離中心: {distance}格)"
+  server-log-respawn: "[安全重生] 玩家 {player} 在世界 {world} 安全重生，座標: X:{x} Y:{y} Z:{z} (群系: {biome}, 距離中心: {distance}格)"
+
+  # 螢幕中央 Title / Subtitle
+  title-first-join: "&#FFAA00&l歡迎加入"
+  subtitle-first-join: "&#AAAAAA世界: &f{world} &#AAAAAA| 座標: &#FFFF55{x}, {z} &#AAAAAA| 群系: &#55FFFF{biome}"
+  
+  title-respawn: "&#FFAA00&l重生成功"
+  subtitle-respawn: "&#AAAAAA世界: &f{world} &#AAAAAA| 座標: &#FFFF55{x}, {z} &#AAAAAA| 群系: &#55FFFF{biome}"
+
+command:
+  no-permission: "&#FF5555你沒有權限使用該命令。"
+  player-only: "&#FF5555該命令只能由玩家在遊戲內使用。"
+  reload-success: "&#55FF55配置與多語言檔案已重新載入 (已啟用 &f{worlds_count}&#55FF55 個世界)。"
+  player-not-found: "&#FF5555找不到玩家: &f{target}"
+  world-not-found: "&#FF5555世界 &f{world} &#FF5555不存在或未啟用隨機出生。"
+  setcenter-success: "&#55FF55已將世界 &f{world} &#55FF55的中心座標設定為: &#FFFF55X: {x}, Z: {z}"
+  usage-setcenter: "&#FF5555用法: &f/{label} setcenter <世界> <x> <z>"
+  invalid-number: "&#FF5555錯誤: X 和 Z 座標必須是有效數字。"
+  tp-success: "&#55FF55已將玩家 &f{player} &#55FF55傳送至: &#FFFF55X: {x} Y: {y} Z: {z} &7({world})"
+  tp-searching: "&#AAAAAA正在尋找合適的位置..."
+  tp-failed: "&#FF5555未找到合適位置，已傳送至預設備用點。"
+  
+  test-header: "&#FFAA00========== [ AnarchySpawn 位置搜尋測試 ] =========="
+  test-searching: "&7正在測試世界 &f{world} &7的安全位置搜尋..."
+  test-result: "&#55FF55測試成功！耗時: &#FFFF55{time_ms}ms &#55FF55| 嘗試: &#FFFF55{attempts}次 &#55FF55| 座標: &#FFFF55{x}, {y}, {z} &#55FF55| 群系: &#FFFF55{biome}"
+  test-failed: "&#FF5555測試失敗！嘗試 {attempts} 次後未找到合適位置。"
+  
+  info-header: "&#FFAA00========== [ AnarchySpawn 運行狀態 ] =========="
+  info-world: "&e- 世界 &f{world}&e: 狀態: {status} | 範圍: &f{min_radius}&e~&f{max_radius}格 &e| 預存位置: &a{pool_size}&e/&a{target_size}"
+  info-cache-refreshed: "&#55FF55已重新填充所有啟用的世界預存位置！"
+
+  help-header: "&6====== &#FFAA00&lAnarchySpawn 幫助選單 &6======"
+  help-reload: "&e/{label} reload &7- 重載設定檔與提示訊息"
+  help-tp: "&e/{label} tp [玩家] [世界] &7- 將玩家隨機傳送至安全位置"
+  help-setcenter: "&e/{label} setcenter <世界> <x> <z> &7- 設定隨機出生的中心座標"
+  help-info: "&e/{label} info &7- 查看所有世界的設定與預存位置數量"
+  help-test: "&e/{label} test [世界] &7- 測試座標搜尋速度與成功率"
+  help-cache: "&e/{label} cache &7- 立即重新補充預存出生點"
+
+# 生物群系本地化名稱對照
+biomes:
+  PLAINS: "平原"
+  SUNFLOWER_PLAINS: "向日葵平原"
+  SNOWY_PLAINS: "雪原"
+  ICE_SPIKES: "冰刺平原"
+  DESERT: "沙漠"
+  SWAMP: "沼澤"
+  MANGROVE_SWAMP: "紅樹林沼澤"
+  FOREST: "森林"
+  FLOWER_FOREST: "繁花森林"
+  BIRCH_FOREST: "白樺森林"
+  DARK_FOREST: "黑森林"
+  OLD_GROWTH_BIRCH_FOREST: "原始白樺森林"
+  OLD_GROWTH_PINE_TAIGA: "原始松木針葉林"
+  OLD_GROWTH_SPRUCE_TAIGA: "原始雲杉針葉林"
+  TAIGA: "針葉林"
+  SNOWY_TAIGA: "積雪針葉林"
+  SAVANNA: "熱帶草原"
+  SAVANNA_PLATEAU: "熱帶高原"
+  WINDSWEPT_HILLS: "風蝕丘陵"
+  WINDSWEPT_GRAVELLY_HILLS: "風蝕沙礫丘陵"
+  WINDSWEPT_FOREST: "風蝕森林"
+  WINDSWEPT_SAVANNA: "風蝕熱帶草原"
+  JUNGLE: "叢林"
+  SPARSE_JUNGLE: "稀疏叢林"
+  BAMBOO_JUNGLE: "竹林"
+  BADLANDS: "惡地"
+  ERODED_BADLANDS: "風蝕惡地"
+  WOODED_BADLANDS: "疏林惡地"
+  MEADOW: "草甸"
+  CHERRY_GROVE: "櫻花樹林"
+  GROVE: "雪林"
+  SNOWY_SLOPES: "積雪斜坡"
+  FROZEN_PEAKS: "冰凍山峰"
+  JAGGED_PEAKS: "尖峭山峰"
+  STONY_PEAKS: "裸岩山峰"
+  RIVER: "河流"
+  FROZEN_RIVER: "凍河"
+  BEACH: "沙灘"
+  SNOWY_BEACH: "積雪沙灘"
+  STONY_SHORE: "石岸"
+  WARM_OCEAN: "暖水海洋"
+  LUKEWARM_OCEAN: "溫水海洋"
+  DEEP_LUKEWARM_OCEAN: "溫水深海"
+  OCEAN: "海洋"
+  DEEP_OCEAN: "深海"
+  COLD_OCEAN: "冷水海洋"
+  DEEP_COLD_OCEAN: "冷水深海"
+  FROZEN_OCEAN: "凍洋"
+  DEEP_FROZEN_OCEAN: "冰凍深海"
+  MUSHROOM_FIELDS: "蘑菇島"
+  DRIPSTONE_CAVES: "溶洞"
+  LUSH_CAVES: "繁茂洞穴"
+  DEEP_DARK: "深暗之域"
+  NETHER_WASTES: "下界荒地"
+  WARPED_FOREST: "詭異森林"
+  CRIMSON_FOREST: "緋紅森林"
+  SOUL_SAND_VALLEY: "靈魂砂峽谷"
+  BASALT_DELTAS: "玄武岩三角洲"
+  THE_END: "末地"
+  END_HIGHLANDS: "末地高地"
+  END_MIDLANDS: "末地中地"
+  SMALL_END_ISLANDS: "小型末地島"
+  END_BARRENS: "末地荒地"
+
+directions:
+  N: "北"
+  NE: "東北"
+  E: "東"
+  SE: "東南"
+  S: "南"
+  SW: "西南"
+  W: "西"
+  NW: "西北"

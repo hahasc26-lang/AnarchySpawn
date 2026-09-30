@@ -1,0 +1,28 @@
+# Maven Target
+target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Eclipse
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# VS Code
+.vscode/
+
+# OS and logs
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.bak

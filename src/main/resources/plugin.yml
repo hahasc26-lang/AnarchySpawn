@@ -1,0 +1,59 @@
+name: AnarchySpawn
+version: '1.0.0'
+main: com.anarchy.spawn.AnarchySpawn
+api-version: '1.16'
+author: AnarchyDev
+description: High-performance Safe Random Spawn and Respawn System for Anarchy Servers
+website: https://github.com/anarchy-mc/AnarchySpawn
+
+softdepend:
+  - PlaceholderAPI
+  - Essentials
+  - Multiverse-Core
+  - Multiverse-Inventories
+  - MultiWorld
+  - CMI
+  - MyWorlds
+
+commands:
+  anarchyspawn:
+    description: AnarchySpawn main command
+    aliases: [aspawn, as, randspawn]
+    permission: anarchyspawn.use
+    usage: /<command> [reload|tp|setcenter|info|test|cache]
+
+permissions:
+  anarchyspawn.use:
+    description: Allows players to receive random spawn on first join and death.
+    default: true
+  anarchyspawn.bypass:
+    description: Bypass random spawn (uses vanilla spawn / bed instead).
+    default: op
+  anarchyspawn.admin:
+    description: Gives access to all administrative commands.
+    default: op
+    children:
+      anarchyspawn.reload: true
+      anarchyspawn.tp: true
+      anarchyspawn.setcenter: true
+      anarchyspawn.info: true
+      anarchyspawn.test: true
+      anarchyspawn.cache: true
+  anarchyspawn.reload:
+    description: Allows reloading configuration and messages.
+    default: op
+  anarchyspawn.tp:
+    description: Allows teleporting players to a random safe spawn.
+    default: op
+  anarchyspawn.setcenter:
+    description: Allows setting the center coordinates of random spawn area.
+    default: op
+  anarchyspawn.info:
+    description: Allows viewing plugin status, cache pool size, and config info.
+    default: op
+  anarchyspawn.test:
+    description: Allows benchmarking and testing location search algorithm.
+    default: op
+  anarchyspawn.cache:
+    description: Allows managing location cache pool directly.
+    default: op

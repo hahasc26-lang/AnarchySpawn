@@ -1,0 +1,238 @@
+# ============================================================================== #
+#                          AnarchySpawn - Configuration                          #
+#           High-Performance Random Spawn & Safe Respawn for Anarchy Servers     #
+# ============================================================================== #
+
+# General Plugin Settings
+general:
+  # Enable verbose debug logging in the server console (useful for troubleshooting)
+  debug: false
+  
+  # Asynchronously search for safe spawn locations to prevent main thread lag spikes(Highly recommended to enable)
+  async-search: true
+  
+  # Maximum search iterations before falling back to the configured fallback-location
+  max-search-attempts: 50
+
+# Multi-Language Localization Settings
+# Language files are stored in 'plugins/AnarchySpawn/languages/' directory.
+# Bundled languages: zh_CN (Simplified Chinese), zh_TW (Traditional Chinese), en_US (English)
+# You can add custom .yml files (e.g., ru_RU.yml, es_ES.yml) to the languages folder.
+language:
+  # Server-side language used for console logs, console commands, and system messages
+  server-language: "en_US"
+  
+  # Default client language used for players when their client language is unmatched or auto-language is disabled
+  client-default-language: "en_US"
+  
+  # Automatically detect and display messages according to the player's client language
+  auto-language: true
+
+
+# First Join Spawn Settings
+# Controls random wilderness dispersal when a new player joins the server
+first-join:
+  # Enable random wilderness dispatch for first-time players
+  enabled: true
+  
+  # Delay in server ticks before teleporting after join (allows client chunk rendering)
+  teleport-delay-ticks: 5
+  
+  # Track initial spawn per world using PersistentDataContainer (no external DB needed)
+  track-per-world-pdc: true
+
+# Death & Respawn Handling
+# Prevents spawn-camping, bed traps, and crystal spawn traps in competitive environments
+respawn:
+  # Enable random wilderness respawn on player death
+  enabled: true
+  
+  # Override vanilla bed respawn point (set to false to allow players to respawn at beds)
+  override-bed: false
+  
+  # Override vanilla Nether respawn anchor point (set to false to preserve anchors)
+  override-anchor: false
+  
+  # Players with permission 'anarchyspawn.bypass' will respawn at their vanilla beds/spawn
+  respect-bypass-permission: true
+
+# Background Location Pre-Cache Pool (Zero-Delay Instant Respawn)
+# Pre-calculates safe coordinates in an async worker thread to provide 0ms instant respawn
+cache-pool:
+  # Enable background async safe location caching
+  enabled: true
+  
+  # Target number of pre-verified safe locations to maintain per active world
+  target-size: 25
+  
+  # Interval in seconds between background cache refill checks
+  refill-interval-seconds: 10
+  
+  # Maximum age in seconds before an unused cached location is discarded and re-verified
+  max-cache-age-seconds: 1800
+
+# Post-Teleport Effects & Spawn Protection
+# Gives freshly spawned players defense against hostile mobs, fall damage, and traps
+spawn-effects:
+  # Temporary damage invulnerability upon spawn
+  protection:
+    # Enable invulnerability timer
+    enabled: true
+    # Duration of invulnerability in seconds
+    invulnerable-seconds: 15
+    
+  # Potion effects granted upon teleportation (Format: "POTION_NAME:DURATION_SECONDS:AMPLIFIER")
+  # Amplifiers start at 1 (e.g., AMPLIFIER 1 = Resistance I, AMPLIFIER 4 = Resistance IV)
+  potion-effects:
+    - "DAMAGE_RESISTANCE:15:4"
+    - "SLOW_FALLING:10:1"
+    - "FIRE_RESISTANCE:30:1"
+    - "SATURATION:5:1"
+    
+  # Sound effect played to the player upon landing
+  sound:
+    enabled: true
+    # Bukkit Sound enum name (supports cross-version fallbacks)
+    name: "ENTITY_PLAYER_LEVELUP"
+    volume: 1.0
+    pitch: 1.2
+    
+  # Particle effect spawned at the player's feet
+  particles:
+    enabled: true
+    # Bukkit Particle enum name
+    type: "PORTAL"
+    count: 60
+    speed: 0.5
+    
+  # On-screen Title and Subtitle display
+  title:
+    enabled: true
+    fadeIn: 10
+    stay: 50
+    fadeOut: 20
+    
+  # Actionbar message display above the hotbar
+  actionbar:
+    enabled: true
+
+# ============================================================================== #
+#                   Spawn & Respawn Notifications (Client & Server)              #
+# Controls which messages are sent to players and logged to the server console.  #
+# ============================================================================== #
+notifications:
+  # Client-side notifications sent to players (All messages customizable in languages/*.yml)
+  client:
+    # Send primary chat message upon spawn or respawn (first-join-chat / respawn-chat)
+    chat: true
+    # Send multi-line detailed location report card (first-join-location-info / respawn-location-info)
+    location-card: true
+    # Send spawn protection started / ended notification
+    protection: true
+    # Send fallback warning when random search fails and uses fallback location
+    fallback-warning: true
+
+  # Server-side notifications logged in the console
+  server:
+    # Log player's initial spawn coordinates to the server console
+    console-log-first-join: true
+    # Log player's respawn coordinates to the server console
+    console-log-respawn: true
+
+
+# ============================================================================== #
+#                            Multi-World Configuration                           #
+# Each world is configured independently. Only worlds with 'enabled: true' will  #
+# trigger random spawn mechanics.                                                #
+# ============================================================================== #
+worlds:
+  # Main Survival / Anarchy World (Overworld - Random spawn active)
+  world:
+    # Enable random spawn in this world
+    enabled: true
+    
+    # Center origin coordinates for equal-area annular distribution
+    center:
+      x: 0
+      z: 0
+      
+    # Minimum inner radius in blocks from center (keeps players away from spawn traps)
+    min-radius: 0
+    
+    # Maximum outer radius in blocks from center (outer boundary of spawn ring)
+    max-radius: 500
+    
+    # Minimum Y coordinate for safe ground searches (1.18+ Overworld: -64, older versions: 0).
+    min-y: -64
+    
+    # Maximum Y coordinate for safe ground searches (1.18+ Overworld: 320, older versions: 256).
+    max-y: 320
+    
+    # Emergency fallback coordinate if no safe location is found after max attempts
+    fallback-location:
+      x: 0
+      y: 80
+      z: 0
+
+  # Example: Nether Dimension (Disabled by default to preserve vanilla portal logic)
+  # world_nether:
+  #   enabled: false
+  #   center:
+  #     x: 0
+  #     z: 0
+  #   min-radius: 500
+  #   max-radius: 8000
+  #   min-y: 32
+  #   max-y: 110
+  #   fallback-location:
+  #     x: 0
+  #     y: 65
+  #     z: 0
+
+  # Example: The End Dimension (Disabled by default to preserve dragon fight & gateways)
+  # world_the_end:
+  #   enabled: false
+
+# ============================================================================== #
+#                         Safety & Biome Filter Settings                         #
+# ============================================================================== #
+safety-filter:
+  # Materials that players must NEVER spawn standing directly on top of
+  unsafe-floor-materials:
+    - "LAVA"
+    - "WATER"
+    - "FIRE"
+    - "SOUL_FIRE"
+    - "MAGMA_BLOCK"
+    - "CACTUS"
+    - "SWEET_BERRY_BUSH"
+    - "POWDER_SNOW"
+    - "WITHER_ROSE"
+    - "CAMPFIRE"
+    - "SOUL_CAMPFIRE"
+    - "NETHER_PORTAL"
+    - "END_PORTAL"
+    - "BEDROCK"
+    - "AIR"
+    - "CAVE_AIR"
+    - "VOID_AIR"
+    - "COBWEB"
+    - "TRIPWIRE"
+    - "PRESSURE_PLATE"
+    - "POINTED_DRIPSTONE"
+    - "TRIAL_SPAWNER"
+    - "VAULT"
+    - "SCULK_SHRIEKER"
+    
+  # Biomes where random spawn searches will immediately skip to avoid drowning or void deaths
+  biome-blacklist:
+    - "OCEAN"
+    - "DEEP_OCEAN"
+    - "WARM_OCEAN"
+    - "LUKEWARM_OCEAN"
+    - "COLD_OCEAN"
+    - "FROZEN_OCEAN"
+    - "DEEP_LUKEWARM_OCEAN"
+    - "DEEP_COLD_OCEAN"
+    - "DEEP_FROZEN_OCEAN"
+    - "THE_VOID"
