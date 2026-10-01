@@ -8,6 +8,7 @@ import com.anarchy.spawn.hook.EssentialsHook;
 import com.anarchy.spawn.hook.PlaceholderAPIHook;
 import com.anarchy.spawn.listener.PlayerJoinListener;
 import com.anarchy.spawn.listener.PlayerRespawnListener;
+import com.anarchy.spawn.listener.PlayerWorldChangeListener;
 import com.anarchy.spawn.service.LocationCachePool;
 import com.anarchy.spawn.service.SafeLocationFinder;
 import com.anarchy.spawn.service.TeleportService;
@@ -112,6 +113,7 @@ public final class AnarchySpawn extends JavaPlugin {
         PluginManager pm = Bukkit.getPluginManager();
         pm.registerEvents(new PlayerJoinListener(this), this);
         pm.registerEvents(new PlayerRespawnListener(this), this);
+        pm.registerEvents(new PlayerWorldChangeListener(this), this);
     }
 
     private void registerCommands() {

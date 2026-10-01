@@ -9,6 +9,8 @@ public class WorldSpawnSettings {
 
     private final String worldName;
     private final boolean enabled;
+    private boolean firstJoin;
+    private boolean ignoreExistingPlayerData;
     private double centerX;
     private double centerZ;
     private double minRadius;
@@ -22,6 +24,27 @@ public class WorldSpawnSettings {
     public WorldSpawnSettings(String worldName, ConfigurationSection section) {
         this.worldName = worldName;
         this.enabled = section.getBoolean("enabled", true);
+
+        // First join random spawn option per world
+        if (section.isConfigurationSection("first-join")) {
+            ConfigurationSection fjSec = section.getConfigurationSection("first-join");
+            this.firstJoin = fjSec != null && fjSec.getBoolean("enabled", true);
+            this.ignoreExistingPlayerData = fjSec == null || fjSec.getBoolean("ignore-existing-playerdata",
+                    fjSec.getBoolean("ignore-existing-player",
+                    fjSec.getBoolean("ignore-existing-data", true)));
+        } else if (section.isSet("first-join")) {
+            this.firstJoin = section.getBoolean("first-join");
+            this.ignoreExistingPlayerData = true;
+        } else if (section.isSet("first-join-enabled")) {
+            this.firstJoin = section.getBoolean("first-join-enabled");
+            this.ignoreExistingPlayerData = true;
+        } else if (section.isSet("first-join-random-spawn")) {
+            this.firstJoin = section.getBoolean("first-join-random-spawn");
+            this.ignoreExistingPlayerData = true;
+        } else {
+            this.firstJoin = true;
+            this.ignoreExistingPlayerData = true;
+        }
 
         // Center
         if (section.isSet("center.x") && section.isSet("center.z")) {
@@ -51,6 +74,11 @@ public class WorldSpawnSettings {
 
     public String getWorldName() { return worldName; }
     public boolean isEnabled() { return enabled; }
+    public boolean isFirstJoin() { return firstJoin; }
+    public boolean isFirstJoinEnabled() { return firstJoin; }
+    public void setFirstJoin(boolean firstJoin) { this.firstJoin = firstJoin; }
+    public boolean isIgnoreExistingPlayerData() { return ignoreExistingPlayerData; }
+    public void setIgnoreExistingPlayerData(boolean ignoreExistingPlayerData) { this.ignoreExistingPlayerData = ignoreExistingPlayerData; }
     public double getCenterX() { return centerX; }
     public void setCenterX(double centerX) { this.centerX = centerX; }
     public double getCenterZ() { return centerZ; }

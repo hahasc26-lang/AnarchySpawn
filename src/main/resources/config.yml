@@ -151,20 +151,24 @@ worlds:
     # Enable random spawn in this world
     enabled: true
     
+    # Settings for random teleportation when entering this world for the first time
+    first-join:
+      # Enable random spawn on first entry into this world
+      enabled: true  
+      # If the player already has existing data files (e.g., playerdata/*.dat or stats), do NOT randomly teleport
+      ignore-existing-playerdata: true
+    
     # Center origin coordinates for equal-area annular distribution
     center:
       x: 0
       z: 0
-      
     # Minimum inner radius in blocks from center (keeps players away from spawn traps)
     min-radius: 0
-    
     # Maximum outer radius in blocks from center (outer boundary of spawn ring)
     max-radius: 500
     
     # Minimum Y coordinate for safe ground searches (1.18+ Overworld: -64, older versions: 0).
     min-y: -64
-    
     # Maximum Y coordinate for safe ground searches (1.18+ Overworld: 320, older versions: 256).
     max-y: 320
     
@@ -177,6 +181,9 @@ worlds:
   # Example: Nether Dimension (Disabled by default to preserve vanilla portal logic)
   # world_nether:
   #   enabled: false
+  #   first-join:
+  #     enabled: true
+  #     ignore-existing-playerdata: true
   #   center:
   #     x: 0
   #     z: 0
@@ -192,6 +199,9 @@ worlds:
   # Example: The End Dimension (Disabled by default to preserve dragon fight & gateways)
   # world_the_end:
   #   enabled: false
+  #   first-join:
+  #     enabled: false
+  #     ignore-existing-playerdata: true
 
 # ============================================================================== #
 #                         Safety & Biome Filter Settings                         #

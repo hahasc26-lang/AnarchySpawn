@@ -6,6 +6,18 @@ All notable changes to this project are documented here.
 格式参考 [Keep a Changelog](https://keepachangelog.com/).  
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.1] - 2026-10-01
+
+### 新增特性 / New Features
+
+* **世界独立配置：初次进入世界时随机传送 (Per-World First-Join Random Teleportation)**:
+  * 在 `config.yml` 的 `worlds.<world>` 配置项中将 `first-join` 支持为包含子配置的对象格式（同时向下兼容纯布尔值）；
+  * 新增 `first-join.enabled`: 控制初次进入该世界是否随机传送；
+  * 新增 `first-join.ignore-existing-playerdata`: 控制如果存在该玩家的数据文件（如 `playerdata/*.dat`、`stats/*.json` 或已有游玩记录）则不实行随机传送，并在检测到老玩家文件时自动补齐该世界的 PDC 标记，彻底杜绝老玩家被误传送；
+  * 新增 `PlayerDataUtils` 模块，用于高性能校验玩家物理数据文件与原版记录；
+  * 新增 `PlayerWorldChangeListener` 监听跨世界事件，配合 PDC（`PersistentDataContainer`）持久化标记，实现玩家初次进入某个启用了该选项的世界时自动执行安全随机传送及给予保护；
+  * 在 `/as info` 管理员指令与多语言文件中新增 `{first_join}` 状态占位符，直观展示各世界初次传送启用情况。
+
 ## [1.0.0] - 2026-09-30
 
 ### 核心特性与架构 / Core Features & Architecture

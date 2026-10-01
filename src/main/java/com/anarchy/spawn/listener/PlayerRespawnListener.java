@@ -2,6 +2,7 @@ package com.anarchy.spawn.listener;
 
 import com.anarchy.spawn.AnarchySpawn;
 import com.anarchy.spawn.config.WorldSpawnSettings;
+import com.anarchy.spawn.util.PDCUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -53,6 +54,9 @@ public class PlayerRespawnListener implements Listener {
         Location cachedLoc = plugin.getCachePool().poll(settings.getWorldName());
         if (cachedLoc != null) {
             event.setRespawnLocation(cachedLoc);
+            if (plugin.getConfigManager().isTrackPerWorldPDC()) {
+                PDCUtils.markSpawnedInWorld(player, settings.getWorldName());
+            }
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (player.isOnline() && !player.isDead()) {
                     plugin.getTeleportService().applyPostRespawnEffects(player, cachedLoc, settings);
@@ -64,6 +68,9 @@ public class PlayerRespawnListener implements Listener {
             Location fallback = settings.getFallbackLocation(targetWorld);
             if (fallback != null) {
                 event.setRespawnLocation(fallback);
+            }
+            if (plugin.getConfigManager().isTrackPerWorldPDC()) {
+                PDCUtils.markSpawnedInWorld(player, settings.getWorldName());
             }
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (player.isOnline() && !player.isDead()) {

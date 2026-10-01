@@ -3,6 +3,7 @@ package com.anarchy.spawn.listener;
 import com.anarchy.spawn.AnarchySpawn;
 import com.anarchy.spawn.config.WorldSpawnSettings;
 import com.anarchy.spawn.util.PDCUtils;
+import com.anarchy.spawn.util.PlayerDataUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -26,11 +27,22 @@ public class PlayerJoinListener implements Listener {
         String worldName = player.getWorld().getName();
 
         WorldSpawnSettings settings = plugin.getConfigManager().getWorldSettings(worldName);
-        if (settings == null || !settings.isEnabled()) {
+        if (settings == null || !settings.isEnabled() || !settings.isFirstJoinEnabled()) {
             return;
         }
 
         if (plugin.getConfigManager().isRespectBypassPermission() && player.hasPermission("anarchyspawn.bypass")) {
+            return;
+        }
+
+        // 如果配置了检测到玩家文件则不实行随机传送
+        if (settings.isIgnoreExistingPlayerData() && PlayerDataUtils.hasExistingPlayerData(player, player.getWorld())) {
+            if (plugin.getConfigManager().isTrackPerWorldPDC()) {
+                PDCUtils.markSpawnedInWorld(player, worldName);
+            }
+            if (plugin.getConfigManager().isDebug()) {
+                plugin.getLogger().info("Player " + player.getName() + " has existing playerdata file; skipping first-join random spawn for world " + worldName);
+            }
             return;
         }
 
@@ -47,6 +59,13 @@ public class PlayerJoinListener implements Listener {
         int delay = plugin.getConfigManager().getFirstJoinDelayTicks();
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (player.isOnline() && !player.isDead()) {
+                WorldSpawnSettings currentSettings = plugin.getConfigManager().getWorldSettings(worldName);
+                if (currentSettings == null || !currentSettings.isEnabled() || !currentSettings.isFirstJoinEnabled()) {
+                    return;
+                }
+                if (currentSettings.isIgnoreExistingPlayerData() && PlayerDataUtils.hasExistingPlayerData(player, player.getWorld())) {
+                    return;
+                }
                 if (plugin.getConfigManager().isTrackPerWorldPDC() && PDCUtils.hasSpawnedInWorld(player, worldName)) {
                     return;
                 }

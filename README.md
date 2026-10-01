@@ -51,7 +51,7 @@
 
 - **Broad Version Compatibility (1.16.5 - 26.2+)**: Built-in runtime reflection layer that safely adapts across legacy and modern Minecraft releases without NoSuchMethod crashes.
 - **Standalone Multi-Language System & Client Locale Auto-Detection**: Language files are organized in a dedicated `languages/` directory (`en_US.yml`, `zh_CN.yml`, `zh_TW.yml`). Messages automatically adapt to each player's client language.
-- **First-Join Safe Drop**: Delays teleportation upon first join or dimension entry to safely dispatch players into configured ring wilderness zones.
+- **First-Join Safe Drop & Per-World Control**: Delays teleportation upon first join or dimension entry to safely dispatch players into configured ring wilderness zones. Each world can independently toggle first-join random spawn (`first-join: true/false`).
 - **PDC Persistent Tracking**: Uses `PersistentDataContainer` (supported since 1.14+) to track spawn history per world without external database dependencies or memory leaks.
 - **Zero-Delay Respawn Cache Pool**: Background async tasks pre-search and maintain a pool of safe locations (`LocationCachePool`) for instant respawn upon death.
 - **Bed & Respawn Anchor Override**: Option to override vanilla beds and respawn anchors to prevent bed-trapping and spawn-kill cycles.
@@ -63,24 +63,9 @@
 
 ---
 
-## Build & Compilation
-
-### Requirements
-- JDK 17 or JDK 21
-- Apache Maven 3.8+
-
-### Compilation Command
-Run the following command in the project root directory:
-```bash
-mvn clean package
-```
-The compiled jar artifact will be located at `target/AnarchySpawn-1.0.0.jar`.
-
----
-
 ## Installation & Usage
 
-1. Copy the compiled `AnarchySpawn-1.0.0.jar` into your server's `plugins/` folder.
+1. Copy the compiled `AnarchySpawn-1.0.1.jar` into your server's `plugins/` folder.
 2. Start the server; default configuration and language files will be generated in `plugins/AnarchySpawn/` and `plugins/AnarchySpawn/languages/`.
 3. Customize `config.yml` and language files in `languages/` according to your server requirements.
 4. Execute `/as reload` in the console or in-game to apply configuration changes on the fly.
@@ -200,7 +185,7 @@ The compiled jar artifact will be located at `target/AnarchySpawn-1.0.0.jar`.
 
 - **超宽跨版本兼容（1.16.5 - 26.2+）**：内置完善的底层反射兼容层与异常拦截，杜绝跨版本 API 调用抛出 `NoSuchMethodError` 或方块枚举不存在崩溃。
 - **独立多语言文件夹与服务端/客户端语言独立分离**：所有语言文件集中存放在 `languages/` 独立目录中（包含 `zh_CN.yml`、`zh_TW.yml`、`en_US.yml`），服务端控制台与客户端默认语言支持分开配置，同时支持根据玩家客户端语言自动呈现对应提示。
-- **首次加入随机投送**：新玩家首次进服或进入启用世界时，延迟安全投送至指定环形区间荒野。
+- **首次加入随机投送与按世界独立配置**：新玩家首次进服或进入启用世界时，延迟安全投送至指定环形区间荒野；支持每个世界独立配置初次进入时是否随机传送（`first-join: true/false`）。
 - **PDC 持久化追踪**：基于 `PersistentDataContainer`（1.14+ 原生支持）记录出生历史，无需外部数据库，杜绝内存泄漏。
 - **0ms 极速重生缓存池**：后台异步线程预先寻找并维持安全坐标池（LocationCachePool），死亡时瞬间调取。
 - **床与重生锚强制覆盖**：可选覆写原版床和重生锚重生机制，防止玩家被堵床连续击杀。
@@ -212,24 +197,9 @@ The compiled jar artifact will be located at `target/AnarchySpawn-1.0.0.jar`.
 
 ---
 
-## 编译与构建
-
-### 前置要求
-- JDK 17 或 JDK 21
-- Apache Maven 3.8+
-
-### 构建指令
-在项目根目录下执行：
-```bash
-mvn clean package
-```
-构建产物位于 `target/AnarchySpawn-1.0.0.jar`。
-
----
-
 ## 安装与使用
 
-1. 将编译生成的 `AnarchySpawn-1.0.0.jar` 放入服务器 `plugins/` 目录中。
+1. 将编译生成的 `AnarchySpawn-1.0.1.jar` 放入服务器 `plugins/` 目录中。
 2. 启动服务器，插件将自动在 `plugins/AnarchySpawn/` 目录下生成 `config.yml`，并在 `plugins/AnarchySpawn/languages/` 目录下生成多语言文件。
 3. 按照需求编辑 `config.yml` 与 `languages/` 中的语言文件。
 4. 在控制台或游戏中输入 `/as reload` 即刻热重载生效。

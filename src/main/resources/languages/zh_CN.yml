@@ -77,7 +77,7 @@ command:
   test-failed: "&#FF5555测试失败！尝试 {attempts} 次后未找到合适位置。"
   
   info-header: "&#FFAA00========== [ AnarchySpawn 运行状态 ] =========="
-  info-world: "&e- 世界 &f{world}&e: 状态: {status} | 范围: &f{min_radius}&e~&f{max_radius}格 &e| 预存位置: &a{pool_size}&e/&a{target_size}"
+  info-world: "&e- 世界 &f{world}&e: 状态: {status} | 初次传送: {first_join} | 范围: &f{min_radius}&e~&f{max_radius}格 &e| 预存位置: &a{pool_size}&e/&a{target_size}"
   info-cache-refreshed: "&#55FF55已重新填充所有启用的世界预存位置！"
 
   help-header: "&6====== &#FFAA00&lAnarchySpawn 帮助菜单 &6======"

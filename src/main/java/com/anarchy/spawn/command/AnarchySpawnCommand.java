@@ -190,6 +190,7 @@ public class AnarchySpawnCommand implements CommandExecutor {
             Map<String, String> p = new HashMap<>();
             p.put("world", s.getWorldName());
             p.put("status", s.isEnabled() ? "&aON" : "&cOFF");
+            p.put("first_join", s.isFirstJoinEnabled() ? "&aON" : "&cOFF");
             p.put("min_radius", String.valueOf((int) s.getMinRadius()));
             p.put("max_radius", String.valueOf((int) s.getMaxRadius()));
             p.put("pool_size", String.valueOf(plugin.getCachePool().getCacheSize(s.getWorldName())));
