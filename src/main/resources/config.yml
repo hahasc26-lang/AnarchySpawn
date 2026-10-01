@@ -10,7 +10,6 @@ general:
   
   # Asynchronously search for safe spawn locations to prevent main thread lag spikes(Highly recommended to enable)
   async-search: true
-  
   # Maximum search iterations before falling back to the configured fallback-location
   max-search-attempts: 50
 
@@ -21,7 +20,6 @@ general:
 language:
   # Server-side language used for console logs, console commands, and system messages
   server-language: "en_US"
-  
   # Default client language used for players when their client language is unmatched or auto-language is disabled
   client-default-language: "en_US"
   
@@ -49,7 +47,6 @@ respawn:
   
   # Override vanilla bed respawn point (set to false to allow players to respawn at beds)
   override-bed: false
-  
   # Override vanilla Nether respawn anchor point (set to false to preserve anchors)
   override-anchor: false
   
