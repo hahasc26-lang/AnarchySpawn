@@ -136,6 +136,8 @@ public final class AnarchySpawn extends JavaPlugin {
             if (papiHooked) {
                 getLogger().info("Hooked into PlaceholderAPI successfully!");
             }
+        } else {
+            getLogger().info("PlaceholderAPI not found, skipping hook.");
         }
 
         // EssentialsX Soft Hook
@@ -144,6 +146,8 @@ public final class AnarchySpawn extends JavaPlugin {
             if (essentialsHooked) {
                 getLogger().info("Detected EssentialsX - spawn bypass compatibility ready.");
             }
+        } else {
+            getLogger().info("EssentialsX not found, skipping hook.");
         }
     }
 
