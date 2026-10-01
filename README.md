@@ -65,7 +65,7 @@
 
 ## Installation & Usage
 
-1. Copy the compiled `AnarchySpawn-1.0.1.jar` into your server's `plugins/` folder.
+1. Copy the compiled `AnarchySpawn-x.x.x.jar` into your server's `plugins/` folder.
 2. Start the server; default configuration and language files will be generated in `plugins/AnarchySpawn/` and `plugins/AnarchySpawn/languages/`.
 3. Customize `config.yml` and language files in `languages/` according to your server requirements.
 4. Execute `/as reload` in the console or in-game to apply configuration changes on the fly.
@@ -137,7 +137,6 @@
 [![Minecraft](https://img.shields.io/badge/Minecraft-1.16.5--26.2-brightgreen?style=flat-square)](https://papermc.io/)
 [![Java](https://img.shields.io/badge/Java-17%20%7C%2021-orange?style=flat-square&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
 [![Build](https://img.shields.io/badge/Build-Maven-blue?style=flat-square&logo=apachemaven&logoColor=white)](https://maven.apache.org/)
-[![PlaceholderAPI](https://img.shields.io/badge/PlaceholderAPI-Supported-blueviolet?style=flat-square)](https://placeholderapi.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Paper%20%7C%20Purpur%20%7C%20Spigot%20%7C%20Bukkit-purple?style=flat-square)](https://papermc.io/)
 
@@ -199,7 +198,7 @@
 
 ## 安装与使用
 
-1. 将编译生成的 `AnarchySpawn-1.0.1.jar` 放入服务器 `plugins/` 目录中。
+1. 将编译生成的 `AnarchySpawn-x.x.x.jar` 放入服务器 `plugins/` 目录中。
 2. 启动服务器，插件将自动在 `plugins/AnarchySpawn/` 目录下生成 `config.yml`，并在 `plugins/AnarchySpawn/languages/` 目录下生成多语言文件。
 3. 按照需求编辑 `config.yml` 与 `languages/` 中的语言文件。
 4. 在控制台或游戏中输入 `/as reload` 即刻热重载生效。
