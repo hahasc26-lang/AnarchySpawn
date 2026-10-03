@@ -12,6 +12,7 @@ import com.anarchy.spawn.listener.PlayerWorldChangeListener;
 import com.anarchy.spawn.service.LocationCachePool;
 import com.anarchy.spawn.service.SafeLocationFinder;
 import com.anarchy.spawn.service.TeleportService;
+import com.anarchy.spawn.util.FoliaScheduler;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.PluginCommand;
@@ -54,6 +55,8 @@ public final class AnarchySpawn extends JavaPlugin {
         getLogger().info("=========================================");
         getLogger().info("  AnarchySpawn v" + getDescription().getVersion() + " Starting...");
         getLogger().info("  Designed for Anarchy Servers");
+        getLogger().info("  Runtime: "
+                + (FoliaScheduler.isFolia() ? "Folia (Regionized Scheduler)" : "Paper/Spigot (Classic Scheduler)"));
         getLogger().info("=========================================");
 
         // Initialize Keys

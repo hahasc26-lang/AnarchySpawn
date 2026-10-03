@@ -2,8 +2,8 @@ package com.anarchy.spawn.listener;
 
 import com.anarchy.spawn.AnarchySpawn;
 import com.anarchy.spawn.config.WorldSpawnSettings;
+import com.anarchy.spawn.util.FoliaScheduler;
 import com.anarchy.spawn.util.PDCUtils;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -21,7 +21,8 @@ public class PlayerRespawnListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerRespawn(PlayerRespawnEvent event) {
-        if (!plugin.getConfigManager().isRespawnEnabled()) return;
+        if (!plugin.getConfigManager().isRespawnEnabled())
+            return;
 
         Player player = event.getPlayer();
 
@@ -33,17 +34,21 @@ public class PlayerRespawnListener implements Listener {
             if (event.isBedSpawn() && !plugin.getConfigManager().isOverrideBed()) {
                 return;
             }
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
 
         try {
             if (event.isAnchorSpawn() && !plugin.getConfigManager().isOverrideAnchor()) {
                 return;
             }
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
 
         Location respawnLoc = event.getRespawnLocation();
-        org.bukkit.World targetWorld = respawnLoc != null && respawnLoc.getWorld() != null ? respawnLoc.getWorld() : player.getWorld();
-        if (targetWorld == null) return;
+        org.bukkit.World targetWorld = respawnLoc != null && respawnLoc.getWorld() != null ? respawnLoc.getWorld()
+                : player.getWorld();
+        if (targetWorld == null)
+            return;
 
         String worldName = targetWorld.getName();
         WorldSpawnSettings settings = plugin.getConfigManager().getWorldSettings(worldName);
@@ -52,18 +57,25 @@ public class PlayerRespawnListener implements Listener {
         }
 
         Location cachedLoc = plugin.getCachePool().poll(settings.getWorldName());
+        // Discard a cached point whose world is no longer loaded; otherwise the
+        // respawn would force a synchronous chunk load on the main thread.
+        if (cachedLoc != null && (cachedLoc.getWorld() == null
+                || org.bukkit.Bukkit.getWorld(cachedLoc.getWorld().getName()) == null)) {
+            cachedLoc = null;
+        }
         if (cachedLoc != null) {
-            event.setRespawnLocation(cachedLoc);
+            final Location finalCachedLoc = cachedLoc;
+            event.setRespawnLocation(finalCachedLoc);
             if (plugin.getConfigManager().isTrackPerWorldPDC()) {
                 PDCUtils.markSpawnedInWorld(player, settings.getWorldName());
             }
-            Bukkit.getScheduler().runTask(plugin, () -> {
+            FoliaScheduler.runForPlayer(plugin, player, () -> {
                 if (player.isOnline() && !player.isDead()) {
-                    plugin.getTeleportService().applyPostRespawnEffects(player, cachedLoc, settings);
+                    plugin.getTeleportService().applyPostRespawnEffects(player, finalCachedLoc, settings);
                 }
             });
             // Trigger background refill since we consumed a cached point
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> plugin.getCachePool().refillAllWorlds());
+            FoliaScheduler.runAsync(plugin, () -> plugin.getCachePool().refillAllWorlds());
         } else {
             Location fallback = settings.getFallbackLocation(targetWorld);
             if (fallback != null) {
@@ -72,13 +84,13 @@ public class PlayerRespawnListener implements Listener {
             if (plugin.getConfigManager().isTrackPerWorldPDC()) {
                 PDCUtils.markSpawnedInWorld(player, settings.getWorldName());
             }
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            FoliaScheduler.runForPlayerLater(plugin, player, () -> {
                 if (player.isOnline() && !player.isDead()) {
                     plugin.getTeleportService().teleportToRandomSpawn(player, settings.getWorldName(), false);
                 }
             }, 1L);
             // Cache is empty, trigger immediate async refill
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> plugin.getCachePool().refillAllWorlds());
+            FoliaScheduler.runAsync(plugin, () -> plugin.getCachePool().refillAllWorlds());
         }
     }
 }

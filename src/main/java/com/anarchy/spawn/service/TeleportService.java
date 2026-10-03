@@ -2,6 +2,7 @@ package com.anarchy.spawn.service;
 
 import com.anarchy.spawn.AnarchySpawn;
 import com.anarchy.spawn.config.WorldSpawnSettings;
+import com.anarchy.spawn.util.FoliaScheduler;
 import com.anarchy.spawn.util.PDCUtils;
 import com.anarchy.spawn.util.PaperCompatibility;
 import org.bukkit.Bukkit;
@@ -38,7 +39,8 @@ public class TeleportService {
             return future;
         }
 
-        WorldSpawnSettings settings = plugin.getConfigManager().getWorldSettings(worldName != null ? worldName : player.getWorld().getName());
+        WorldSpawnSettings settings = plugin.getConfigManager()
+                .getWorldSettings(worldName != null ? worldName : player.getWorld().getName());
         if (settings == null) {
             future.complete(false);
             return future;
@@ -50,17 +52,24 @@ public class TeleportService {
         }
 
         Location cachedLoc = plugin.getCachePool().poll(settings.getWorldName());
+        // A cached location is only usable when its world is currently loaded; a stale
+        // cache entry referencing an unloaded world would make teleportAsync fail.
+        if (cachedLoc != null && cachedLoc.getWorld() != null
+                && Bukkit.getWorld(cachedLoc.getWorld().getName()) == null) {
+            cachedLoc = null;
+        }
         if (cachedLoc != null) {
-            ensureMainThread(() -> {
+            final Location finalCachedLoc = cachedLoc;
+            FoliaScheduler.runForPlayer(plugin, player, () -> {
                 if (player == null || !player.isOnline() || player.isDead()) {
                     future.complete(false);
                     return;
                 }
-                PaperCompatibility.teleportPlayerAsync(player, cachedLoc).thenAccept(success -> {
+                PaperCompatibility.teleportPlayerAsync(player, finalCachedLoc).thenAccept(success -> {
                     if (success) {
-                        applyEffectsAndFeedback(player, cachedLoc, settings, isFirstJoin);
+                        applyEffectsAndFeedback(player, finalCachedLoc, settings, isFirstJoin);
                         // Trigger background refill since we consumed a cached point
-                        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> plugin.getCachePool().refillAllWorlds());
+                        FoliaScheduler.runAsync(plugin, () -> plugin.getCachePool().refillAllWorlds());
                     }
                     future.complete(success);
                 });
@@ -70,7 +79,7 @@ public class TeleportService {
 
         final org.bukkit.World finalWorld = targetWorld;
         plugin.getLocationFinder().findSafeLocationAsync(finalWorld, settings).thenAccept(result -> {
-            ensureMainThread(() -> {
+            FoliaScheduler.runForPlayer(plugin, player, () -> {
                 if (player == null || !player.isOnline() || player.isDead()) {
                     future.complete(false);
                     return;
@@ -80,7 +89,8 @@ public class TeleportService {
                 PaperCompatibility.teleportPlayerAsync(player, targetLoc).thenAccept(success -> {
                     if (success) {
                         applyEffectsAndFeedback(player, targetLoc, settings, isFirstJoin);
-                        if (isFallback && plugin.getConfigManager().isClientFallbackWarningEnabled() && plugin.getMessageManager().hasMessage(player, "spawn.fallback-warning")) {
+                        if (isFallback && plugin.getConfigManager().isClientFallbackWarningEnabled()
+                                && plugin.getMessageManager().hasMessage(player, "spawn.fallback-warning")) {
                             Map<String, String> warnP = new HashMap<>();
                             warnP.put("player", player.getName());
                             warnP.put("world", targetLoc.getWorld().getName());
@@ -99,12 +109,15 @@ public class TeleportService {
     }
 
     public void applyPostRespawnEffects(Player player, Location location, WorldSpawnSettings settings) {
-        if (player == null || !player.isOnline() || location == null || settings == null) return;
-        ensureMainThread(() -> applyEffectsAndFeedback(player, location, settings, false));
+        if (player == null || !player.isOnline() || location == null || settings == null)
+            return;
+        FoliaScheduler.runForPlayer(plugin, player, () -> applyEffectsAndFeedback(player, location, settings, false));
     }
 
-    private void applyEffectsAndFeedback(Player player, Location location, WorldSpawnSettings settings, boolean isFirstJoin) {
-        if (player == null || !player.isOnline() || location == null || location.getWorld() == null) return;
+    private void applyEffectsAndFeedback(Player player, Location location, WorldSpawnSettings settings,
+            boolean isFirstJoin) {
+        if (player == null || !player.isOnline() || location == null || location.getWorld() == null)
+            return;
 
         if (plugin.getConfigManager().isTrackPerWorldPDC()) {
             PDCUtils.markSpawnedInWorld(player, settings.getWorldName());
@@ -115,7 +128,8 @@ public class TeleportService {
         if (invulSecs > 0) {
             try {
                 player.setInvulnerable(true);
-            } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {
+            }
             player.setNoDamageTicks(invulSecs * 20);
 
             // Cancel any previous protection task
@@ -124,12 +138,13 @@ public class TeleportService {
                 previousTask.cancel();
             }
 
-            BukkitTask protectionTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            BukkitTask protectionTask = FoliaScheduler.runForPlayerLater(plugin, player, () -> {
                 activeProtectionTasks.remove(player.getUniqueId());
                 if (player.isOnline()) {
                     try {
                         player.setInvulnerable(false);
-                    } catch (Throwable ignored) {}
+                    } catch (Throwable ignored) {
+                    }
                     if (plugin.getConfigManager().isClientProtectionMsgEnabled()) {
                         plugin.getMessageManager().sendMessage(player, "spawn.protection-ended", null);
                     }
@@ -153,13 +168,16 @@ public class TeleportService {
                     if (soundName.contains("TELEPORT")) {
                         try {
                             sound = Sound.valueOf("ENTITY_ENDERMAN_TELEPORT");
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
                 if (sound != null) {
-                    player.playSound(location, sound, plugin.getConfigManager().getSoundVolume(), plugin.getConfigManager().getSoundPitch());
+                    player.playSound(location, sound, plugin.getConfigManager().getSoundVolume(),
+                            plugin.getConfigManager().getSoundPitch());
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
 
         if (plugin.getConfigManager().isParticleEnabled()) {
@@ -171,7 +189,8 @@ public class TeleportService {
                 } catch (IllegalArgumentException e) {
                     try {
                         particle = Particle.valueOf("PORTAL");
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                    }
                 }
                 if (particle != null) {
                     player.getWorld().spawnParticle(particle, location.clone().add(0, 1, 0),
@@ -179,7 +198,8 @@ public class TeleportService {
                             0.5, 0.5, 0.5,
                             plugin.getConfigManager().getParticleSpeed());
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
 
         Map<String, String> placeholders = new HashMap<>();
@@ -202,7 +222,8 @@ public class TeleportService {
         String rawBiome = "UNKNOWN";
         try {
             rawBiome = location.getBlock().getBiome().name();
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
         placeholders.put("biome_raw", rawBiome);
         placeholders.put("biome", plugin.getMessageManager().getLocalizedBiome(player, rawBiome));
         placeholders.put("direction", plugin.getMessageManager().getLocalizedDirection(player, location.getYaw()));
@@ -250,18 +271,20 @@ public class TeleportService {
 
         // 7. 管理员重生监控提示 (如果配置了且非空)
         if (!isFirstJoin && plugin.getMessageManager().hasMessage(null, "spawn.admin-notify-respawn")) {
-            plugin.getMessageManager().sendPermissionMessage("anarchyspawn.admin", "spawn.admin-notify-respawn", placeholders);
+            plugin.getMessageManager().sendPermissionMessage("anarchyspawn.admin", "spawn.admin-notify-respawn",
+                    placeholders);
         }
 
         // 8. 服务端控制台日志提示 (若服务端配置开启)
-        boolean shouldLogServer = isFirstJoin 
-                ? plugin.getConfigManager().isServerLogFirstJoin() 
+        boolean shouldLogServer = isFirstJoin
+                ? plugin.getConfigManager().isServerLogFirstJoin()
                 : plugin.getConfigManager().isServerLogRespawn();
         if (shouldLogServer) {
             String consolePath = isFirstJoin ? "spawn.server-log-first-join" : "spawn.server-log-respawn";
             Map<String, String> serverPlaceholders = new HashMap<>(placeholders);
             serverPlaceholders.put("biome", plugin.getMessageManager().getLocalizedBiome(null, rawBiome));
-            serverPlaceholders.put("direction", plugin.getMessageManager().getLocalizedDirection(null, location.getYaw()));
+            serverPlaceholders.put("direction",
+                    plugin.getMessageManager().getLocalizedDirection(null, location.getYaw()));
 
             if (plugin.getMessageManager().hasMessage(null, consolePath)) {
                 String consoleMsg = plugin.getMessageManager().getFormatted(null, consolePath, serverPlaceholders);
@@ -269,11 +292,17 @@ public class TeleportService {
             } else {
                 String localizedBiome = plugin.getMessageManager().getLocalizedBiome(null, rawBiome);
                 if (isFirstJoin) {
-                    plugin.getLogger().info(String.format("Player %s initial spawn at %s (X: %d, Y: %d, Z: %d, Biome: %s, Distance: %d)",
-                            player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ(), localizedBiome, dist));
+                    plugin.getLogger()
+                            .info(String.format(
+                                    "Player %s initial spawn at %s (X: %d, Y: %d, Z: %d, Biome: %s, Distance: %d)",
+                                    player.getName(), location.getWorld().getName(), location.getBlockX(),
+                                    location.getBlockY(), location.getBlockZ(), localizedBiome, dist));
                 } else {
-                    plugin.getLogger().info(String.format("Player %s respawned at %s (X: %d, Y: %d, Z: %d, Biome: %s, Distance: %d)",
-                            player.getName(), location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ(), localizedBiome, dist));
+                    plugin.getLogger()
+                            .info(String.format(
+                                    "Player %s respawned at %s (X: %d, Y: %d, Z: %d, Biome: %s, Distance: %d)",
+                                    player.getName(), location.getWorld().getName(), location.getBlockX(),
+                                    location.getBlockY(), location.getBlockZ(), localizedBiome, dist));
                 }
             }
         }
@@ -294,7 +323,8 @@ public class TeleportService {
                         player.addPotionEffect(new PotionEffect(type, durationTicks, amplifier, false, false, true));
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
     }
 
@@ -322,18 +352,22 @@ public class TeleportService {
 
     @SuppressWarnings("deprecation")
     private PotionEffectType resolvePotionEffectType(String name) {
-        if (name == null || name.isEmpty()) return null;
+        if (name == null || name.isEmpty())
+            return null;
         String clean = name.trim().toUpperCase(Locale.ROOT).replace(" ", "_");
         String standardKey = EFFECT_ALIASES.getOrDefault(clean, clean.toLowerCase(Locale.ROOT));
 
         try {
             PotionEffectType type = PotionEffectType.getByKey(NamespacedKey.minecraft(standardKey));
-            if (type != null) return type;
-        } catch (Throwable ignored) {}
+            if (type != null)
+                return type;
+        } catch (Throwable ignored) {
+        }
 
         try {
             return PotionEffectType.getByName(clean);
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
 
         return null;
     }
@@ -345,19 +379,15 @@ public class TeleportService {
             }
             Player p = Bukkit.getPlayer(entry.getKey());
             if (p != null && p.isOnline()) {
-                try {
-                    p.setInvulnerable(false);
-                } catch (Throwable ignored) {}
+                // Player state must be mutated on the player's owning region thread (Folia).
+                FoliaScheduler.runForPlayer(plugin, p, () -> {
+                    try {
+                        p.setInvulnerable(false);
+                    } catch (Throwable ignored) {
+                    }
+                });
             }
         }
         activeProtectionTasks.clear();
-    }
-
-    private void ensureMainThread(Runnable task) {
-        if (Bukkit.isPrimaryThread()) {
-            task.run();
-        } else if (plugin.isEnabled()) {
-            Bukkit.getScheduler().runTask(plugin, task);
-        }
     }
 }

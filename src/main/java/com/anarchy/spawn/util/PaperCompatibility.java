@@ -1,7 +1,6 @@
 package com.anarchy.spawn.util;
 
 import com.anarchy.spawn.AnarchySpawn;
-import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -11,7 +10,8 @@ import java.lang.reflect.Method;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Ensures optimal performance on PaperMC (using getChunkAtAsync & teleportAsync) while maintaining 100% Bukkit/Spigot compatibility.
+ * Ensures optimal performance on PaperMC (using getChunkAtAsync &
+ * teleportAsync) while maintaining 100% Bukkit/Spigot compatibility.
  */
 public class PaperCompatibility {
 
@@ -29,7 +29,8 @@ public class PaperCompatibility {
 
         try {
             teleportAsyncMethod = Player.class.getMethod("teleportAsync", Location.class);
-        } catch (NoSuchMethodException ignored) {}
+        } catch (NoSuchMethodException ignored) {
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -46,7 +47,8 @@ public class PaperCompatibility {
                 if (future != null) {
                     return future;
                 }
-            } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {
+            }
         }
 
         CompletableFuture<Chunk> fallbackFuture = new CompletableFuture<>();
@@ -55,7 +57,9 @@ public class PaperCompatibility {
             return fallbackFuture;
         }
 
-        if (Bukkit.isPrimaryThread()) {
+        // Chunk access must run on the owning world's region thread (Folia) or the main
+        // thread (Spigot/Paper). FoliaScheduler handles both transparently.
+        FoliaScheduler.runForRegion(AnarchySpawn.getInstance(), world, () -> {
             try {
                 Chunk chunk = world.getChunkAt(x, z);
                 if (!chunk.isLoaded()) {
@@ -65,19 +69,7 @@ public class PaperCompatibility {
             } catch (Throwable t) {
                 fallbackFuture.completeExceptionally(t);
             }
-        } else {
-            Bukkit.getScheduler().runTask(AnarchySpawn.getInstance(), () -> {
-                try {
-                    Chunk chunk = world.getChunkAt(x, z);
-                    if (!chunk.isLoaded()) {
-                        chunk.load();
-                    }
-                    fallbackFuture.complete(chunk);
-                } catch (Throwable t) {
-                    fallbackFuture.completeExceptionally(t);
-                }
-            });
-        }
+        });
         return fallbackFuture;
     }
 
@@ -89,38 +81,34 @@ public class PaperCompatibility {
 
         if (teleportAsyncMethod != null) {
             try {
-                CompletableFuture<Boolean> future = (CompletableFuture<Boolean>) teleportAsyncMethod.invoke(player, location);
+                CompletableFuture<Boolean> future = (CompletableFuture<Boolean>) teleportAsyncMethod.invoke(player,
+                        location);
                 if (future != null) {
                     return future;
                 }
-            } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {
+            }
         }
 
         CompletableFuture<Boolean> fallbackFuture = new CompletableFuture<>();
-        if (Bukkit.isPrimaryThread()) {
+        if (!AnarchySpawn.getInstance().isEnabled()) {
+            return CompletableFuture.completedFuture(false);
+        }
+        // Teleportation must run on the player's owning region thread (Folia) or the
+        // main
+        // thread (Spigot/Paper). FoliaScheduler handles both transparently.
+        FoliaScheduler.runForPlayer(AnarchySpawn.getInstance(), player, () -> {
             try {
-                boolean result = player.teleport(location);
-                fallbackFuture.complete(result);
+                if (player.isOnline()) {
+                    boolean result = player.teleport(location);
+                    fallbackFuture.complete(result);
+                } else {
+                    fallbackFuture.complete(false);
+                }
             } catch (Throwable t) {
                 fallbackFuture.complete(false);
             }
-        } else {
-            if (!AnarchySpawn.getInstance().isEnabled()) {
-                return CompletableFuture.completedFuture(false);
-            }
-            Bukkit.getScheduler().runTask(AnarchySpawn.getInstance(), () -> {
-                try {
-                    if (player.isOnline()) {
-                        boolean result = player.teleport(location);
-                        fallbackFuture.complete(result);
-                    } else {
-                        fallbackFuture.complete(false);
-                    }
-                } catch (Throwable t) {
-                    fallbackFuture.complete(false);
-                }
-            });
-        }
+        });
         return fallbackFuture;
     }
 

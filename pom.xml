@@ -6,7 +6,7 @@
 
     <groupId>com.anarchy.spawn</groupId>
     <artifactId>AnarchySpawn</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <packaging>jar</packaging>
 
     <name>AnarchySpawn</name>
@@ -97,7 +97,7 @@
             </resource>
         </resources>
         <plugins>
-            <!-- Maven Compiler Plugin with Java 17 support -->
+            <!-- Maven Compiler Plugin with Java 21 support -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

@@ -52,7 +52,8 @@ public class MessageManager {
                     YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
                     languages.put(langKey, cfg);
                 } catch (Exception e) {
-                    plugin.getLogger().warning("Failed to load language file: " + fileName + " (" + e.getMessage() + ")");
+                    plugin.getLogger()
+                            .warning("Failed to load language file: " + fileName + " (" + e.getMessage() + ")");
                 }
             }
         }
@@ -83,7 +84,8 @@ public class MessageManager {
         }
 
         this.defaultMessages = this.serverMessages;
-        this.defaultPrefix = ColorUtils.colorize(serverMessages.getString("prefix", "&#FF5555&l[&#FFAA00AnarchySpawn&#FF5555&l] &r"));
+        this.defaultPrefix = ColorUtils
+                .colorize(serverMessages.getString("prefix", "&#FF5555&l[&#FFAA00AnarchySpawn&#FF5555&l] &r"));
     }
 
     private void saveDefaultLanguageFile(String resourceName) {
@@ -95,10 +97,12 @@ public class MessageManager {
                 // If saveResource fails, try copying stream manually
                 try (InputStream in = plugin.getResource("languages/" + resourceName)) {
                     if (in != null) {
-                        YamlConfiguration cfg = YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
+                        YamlConfiguration cfg = YamlConfiguration
+                                .loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
                         cfg.save(targetFile);
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             }
         }
     }
@@ -117,12 +121,14 @@ public class MessageManager {
                     }
 
                     // Dialect & Region mapping
-                    if (normLocale.contains("tw") || normLocale.contains("hk") || normLocale.contains("mo") || normLocale.contains("hant")) {
+                    if (normLocale.contains("tw") || normLocale.contains("hk") || normLocale.contains("mo")
+                            || normLocale.contains("hant")) {
                         if (languages.containsKey("zh_tw")) {
                             return languages.get("zh_tw");
                         }
                     }
-                    if (normLocale.startsWith("zh") || normLocale.contains("cn") || normLocale.contains("sg") || normLocale.contains("hans")) {
+                    if (normLocale.startsWith("zh") || normLocale.contains("cn") || normLocale.contains("sg")
+                            || normLocale.contains("hans")) {
                         if (languages.containsKey("zh_cn")) {
                             return languages.get("zh_cn");
                         }
@@ -152,7 +158,8 @@ public class MessageManager {
 
     @SuppressWarnings("deprecation")
     private String getPlayerLocale(Player player) {
-        if (player == null) return null;
+        if (player == null)
+            return null;
         try {
             return player.getLocale();
         } catch (Throwable t) {
@@ -175,13 +182,16 @@ public class MessageManager {
 
     public boolean hasMessage(CommandSender sender, String path) {
         FileConfiguration cfg = resolveConfig(sender);
-        if (checkConfigHasMessage(cfg, path)) return true;
-        if (sender instanceof Player && checkConfigHasMessage(clientDefaultMessages, path)) return true;
+        if (checkConfigHasMessage(cfg, path))
+            return true;
+        if (sender instanceof Player && checkConfigHasMessage(clientDefaultMessages, path))
+            return true;
         return checkConfigHasMessage(serverMessages != null ? serverMessages : defaultMessages, path);
     }
 
     private boolean checkConfigHasMessage(FileConfiguration cfg, String path) {
-        if (cfg == null || !cfg.contains(path)) return false;
+        if (cfg == null || !cfg.contains(path))
+            return false;
         if (cfg.isList(path)) {
             return !cfg.getStringList(path).isEmpty();
         }
@@ -212,7 +222,8 @@ public class MessageManager {
 
     public String getFormatted(CommandSender sender, String path, Map<String, String> placeholders) {
         String msg = getRaw(sender, path);
-        if (msg == null) msg = "";
+        if (msg == null)
+            msg = "";
         return formatString(sender, msg, placeholders);
     }
 
@@ -220,7 +231,8 @@ public class MessageManager {
         return getFormatted(null, path, placeholders);
     }
 
-    public java.util.List<String> getFormattedList(CommandSender sender, String path, Map<String, String> placeholders) {
+    public java.util.List<String> getFormattedList(CommandSender sender, String path,
+            Map<String, String> placeholders) {
         FileConfiguration cfg = resolveConfig(sender);
         java.util.List<String> rawList = extractList(cfg, path);
 
@@ -243,7 +255,8 @@ public class MessageManager {
     }
 
     private java.util.List<String> extractList(FileConfiguration cfg, String path) {
-        if (cfg == null || !cfg.contains(path)) return null;
+        if (cfg == null || !cfg.contains(path))
+            return null;
         if (cfg.isList(path)) {
             return cfg.getStringList(path);
         }
@@ -255,7 +268,8 @@ public class MessageManager {
     }
 
     private String formatString(CommandSender sender, String raw, Map<String, String> placeholders) {
-        if (raw == null) return "";
+        if (raw == null)
+            return "";
         String msg = raw;
         if (placeholders != null) {
             for (Map.Entry<String, String> entry : placeholders.entrySet()) {
@@ -273,8 +287,10 @@ public class MessageManager {
     }
 
     public void sendMessage(CommandSender sender, String path, Map<String, String> placeholders) {
-        if (sender == null) return;
-        if (!hasMessage(sender, path)) return;
+        if (sender == null)
+            return;
+        if (!hasMessage(sender, path))
+            return;
 
         FileConfiguration cfg = resolveConfig(sender);
         boolean isList = (cfg != null && cfg.isList(path)) || (defaultMessages != null && defaultMessages.isList(path));
@@ -282,7 +298,9 @@ public class MessageManager {
         if (isList) {
             java.util.List<String> lines = getFormattedList(sender, path, placeholders);
             for (String line : lines) {
-                if (line.startsWith("[prefix]")) {
+                if (line.startsWith("[noprefix]")) {
+                    sender.sendMessage(line.substring(10));
+                } else if (line.startsWith("[prefix]")) {
                     sender.sendMessage(getPrefix(sender) + line.substring(8));
                 } else {
                     sender.sendMessage(line);
@@ -290,7 +308,8 @@ public class MessageManager {
             }
         } else {
             String raw = getRaw(sender, path);
-            if (raw == null || raw.trim().isEmpty()) return;
+            if (raw == null || raw.trim().isEmpty())
+                return;
             if (raw.contains("\n")) {
                 java.util.List<String> lines = getFormattedList(sender, path, placeholders);
                 for (String line : lines) {
@@ -332,9 +351,9 @@ public class MessageManager {
         }
     }
 
-
     public String getLocalizedBiome(CommandSender sender, String biomeName) {
-        if (biomeName == null || biomeName.isEmpty()) return "Unknown";
+        if (biomeName == null || biomeName.isEmpty())
+            return "Unknown";
         String clean = biomeName.trim().toUpperCase(Locale.ROOT);
         String path = "biomes." + clean;
 
@@ -346,11 +365,13 @@ public class MessageManager {
             return defaultMessages.getString(path);
         }
 
-        // Format neatly like PLAINS -> Plains, OLD_GROWTH_BIRCH_FOREST -> Old Growth Birch Forest
+        // Format neatly like PLAINS -> Plains, OLD_GROWTH_BIRCH_FOREST -> Old Growth
+        // Birch Forest
         String[] words = clean.split("_");
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < words.length; i++) {
-            if (words[i].isEmpty()) continue;
+            if (words[i].isEmpty())
+                continue;
             sb.append(Character.toUpperCase(words[i].charAt(0)));
             if (words[i].length() > 1) {
                 sb.append(words[i].substring(1).toLowerCase(Locale.ROOT));
@@ -364,17 +385,26 @@ public class MessageManager {
 
     public String getLocalizedDirection(CommandSender sender, float yaw) {
         float rot = (yaw - 90) % 360;
-        if (rot < 0) rot += 360.0f;
+        if (rot < 0)
+            rot += 360.0f;
 
         String key;
-        if (rot >= 337.5 || rot < 22.5) key = "W";
-        else if (rot >= 22.5 && rot < 67.5) key = "NW";
-        else if (rot >= 67.5 && rot < 112.5) key = "N";
-        else if (rot >= 112.5 && rot < 157.5) key = "NE";
-        else if (rot >= 157.5 && rot < 202.5) key = "E";
-        else if (rot >= 202.5 && rot < 247.5) key = "SE";
-        else if (rot >= 247.5 && rot < 292.5) key = "S";
-        else key = "SW";
+        if (rot >= 337.5 || rot < 22.5)
+            key = "W";
+        else if (rot >= 22.5 && rot < 67.5)
+            key = "NW";
+        else if (rot >= 67.5 && rot < 112.5)
+            key = "N";
+        else if (rot >= 112.5 && rot < 157.5)
+            key = "NE";
+        else if (rot >= 157.5 && rot < 202.5)
+            key = "E";
+        else if (rot >= 202.5 && rot < 247.5)
+            key = "SE";
+        else if (rot >= 247.5 && rot < 292.5)
+            key = "S";
+        else
+            key = "SW";
 
         String path = "directions." + key;
         FileConfiguration cfg = resolveConfig(sender);
@@ -386,15 +416,24 @@ public class MessageManager {
         }
 
         switch (key) {
-            case "N": return "北";
-            case "NE": return "东北";
-            case "E": return "东";
-            case "SE": return "东南";
-            case "S": return "南";
-            case "SW": return "西南";
-            case "W": return "西";
-            case "NW": return "西北";
-            default: return key;
+            case "N":
+                return "北";
+            case "NE":
+                return "东北";
+            case "E":
+                return "东";
+            case "SE":
+                return "东南";
+            case "S":
+                return "南";
+            case "SW":
+                return "西南";
+            case "W":
+                return "西";
+            case "NW":
+                return "西北";
+            default:
+                return key;
         }
     }
 
@@ -405,28 +444,36 @@ public class MessageManager {
     }
 
     @SuppressWarnings("deprecation")
-    public void sendTitle(Player player, String titlePath, String subtitlePath, Map<String, String> placeholders, int fadeIn, int stay, int fadeOut) {
-        if (player == null || !plugin.getConfigManager().isTitleEnabled()) return;
+    public void sendTitle(Player player, String titlePath, String subtitlePath, Map<String, String> placeholders,
+            int fadeIn, int stay, int fadeOut) {
+        if (player == null || !plugin.getConfigManager().isTitleEnabled())
+            return;
         String title = hasMessage(player, titlePath) ? getFormatted(player, titlePath, placeholders) : "";
         String subtitle = hasMessage(player, subtitlePath) ? getFormatted(player, subtitlePath, placeholders) : "";
-        if (title.trim().isEmpty() && subtitle.trim().isEmpty()) return;
+        if (title.trim().isEmpty() && subtitle.trim().isEmpty())
+            return;
         try {
             player.sendTitle(title, subtitle, fadeIn, stay, fadeOut);
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
     }
 
     @SuppressWarnings("deprecation")
     public void sendActionBar(Player player, String path, Map<String, String> placeholders) {
-        if (player == null || !plugin.getConfigManager().isActionbarEnabled()) return;
-        if (!hasMessage(player, path)) return;
+        if (player == null || !plugin.getConfigManager().isActionbarEnabled())
+            return;
+        if (!hasMessage(player, path))
+            return;
         String msg = getFormatted(player, path, placeholders);
-        if (msg.trim().isEmpty()) return;
+        if (msg.trim().isEmpty())
+            return;
         try {
             player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(msg));
         } catch (Throwable e) {
             try {
                 player.sendMessage(msg);
-            } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {
+            }
         }
     }
 

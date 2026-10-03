@@ -1,26 +1,61 @@
 # Changelog
 
-本文件记录本项目所有重要变更。
 All notable changes to this project are documented in this file.
 
-格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
-本项目版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
-This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and uses [Semantic Versioning](https://semver.org/).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
+
+> 中文版请见 [CHANGELOG_Chinese.md](CHANGELOG_Chinese.md).
+
+## [1.0.2] - 2026-10-03
+
+### Added
+
+* **Native Folia Server Compatibility (Single-JAR Dual Compatibility)**:
+  * Added the `FoliaScheduler` unified scheduler abstraction layer, which reflectively probes `Bukkit.getRegionizedScheduler()` to auto-detect the Folia runtime; all scheduling calls across the project are now funneled through this layer with zero `if-else` branching in business code;
+  * Provides five semantic scheduling entry points: `runForPlayer` / `runForPlayerLater` (player's owning region thread), `runForRegion` (world's owning region thread), `runTimerGlobal` (global repeating task), and `runAsync` (pure background task);
+  * On non-Folia environments (Paper / Purpur / Spigot / CraftBukkit) it automatically falls back to the original classic scheduler path, behaving exactly like 1.0.1 with zero regression risk;
+  * The startup log now reports the runtime mode (`Folia (Regionized Scheduler)` or `Paper/Spigot (Classic Scheduler)`) so operators can confirm the active scheduling mode.
+
+### Changed
+
+* **Full migration of scheduler calls to `FoliaScheduler`** (15 call sites in total):
+  * `PlayerJoinListener`: first-join delayed teleport now uses the player region thread scheduler;
+  * `PlayerRespawnListener`: post-respawn effects, fallback random teleport, and cache pool refill (4 call sites) migrated;
+  * `PlayerWorldChangeListener`: cross-world first-join delayed task migrated;
+  * `TeleportService`: cached-point teleport, async search callback, post-respawn effects, and spawn protection countdown (5 call sites) migrated, and the ineffective `Bukkit.isPrimaryThread()` check inside `ensureMainThread()` removed;
+  * `LocationCachePool`: background cache refill timer migrated to the global region scheduler;
+  * `SafeLocationFinder`: safe-column evaluation after async chunk load migrated to the world region thread scheduler;
+  * `AnarchySpawnCommand`: `/as tp`, `/as setcenter`, and `/as test` (3 call sites) migrated.
+* **`PaperCompatibility` fallback path refactor**:
+  * Removed the ineffective `Bukkit.isPrimaryThread()` checks from the `getChunkAtAsync` and `teleportPlayerAsync` fallback branches;
+  * Chunk loading fallback now uniformly uses `FoliaScheduler.runForRegion`, and teleport fallback uniformly uses `FoliaScheduler.runForPlayer`, satisfying both Folia thread confinement and the Spigot/Paper main-thread requirement.
+* **Thread-safety refactor of `TeleportService.cancelAllProtectionTasks()`**: on plugin disable, `setInvulnerable(false)` for online players is now dispatched to each player's owning region thread, eliminating cross-thread access violations.
+
+### Fixed
+
+* Fixed `UnsupportedOperationException` and thread confinement violations on Folia caused by using the classic Bukkit scheduler (`runTask` / `runTaskLater` / `runTaskAsynchronously` / `runTaskTimerAsynchronously`);
+* Fixed abnormal chunk loading and teleport fallback paths on Folia caused by the ineffective `Bukkit.isPrimaryThread()` semantics.
+* **Folia scheduler reflection signature fix (critical)**:
+  * Corrected the erroneous Folia scheduler API signature assumption in the `FoliaScheduler` static probe block. The previous implementation probed `RegionScheduler#runTaskTimer(Plugin, Runnable, long, long)`, which does not exist on Folia's `RegionScheduler` (global repeating tasks belong to `GlobalRegionScheduler`), causing a `NoSuchMethodException` that disabled the entire Folia detection and fell back to the classic scheduler unsupported on Folia, resulting in runtime crashes;
+  * Now split into four schedulers resolved independently via reflection: `EntityScheduler` (player region thread), `RegionScheduler` (world region thread), `GlobalRegionScheduler` (global repeating tasks), and `AsyncScheduler` (pure background tasks);
+  * Each reflective handle is resolved in its own try/catch, so a single missing method no longer disables the whole Folia detection; Folia is only assumed when `RegionScheduler` resolves successfully.
+* **`runAsync()` argument fix**: the previous implementation incorrectly invoked `RegionScheduler#runTask(Plugin, World, Runnable)` while omitting the `World` argument, then fell back to `runTaskAsynchronously` which is unsupported on Folia. Now uses `AsyncScheduler#runNow(Plugin, Consumer)`.
+* **`runTimerGlobal()` semantic fix**: the previous implementation used `RegionScheduler` for global repeating tasks; now uses `GlobalRegionScheduler#runAtFixedRate(Plugin, Runnable, long, long)`.
+* **`runForPlayer()` / `runForPlayerLater()` signature fix**: now use `EntityScheduler#run(Plugin, Runnable, Runnable)` and `runDelayed(Plugin, Runnable, Runnable, long)`.
+* **`runForRegion()` signature fix**: now uses `RegionScheduler#run(Plugin, World, int, int, Runnable)`.
+* **`LocationCachePool` thread-confinement fix**: `refillAllWorlds()` previously iterated worlds and read world data directly on the global scheduler thread, violating Folia's thread confinement. Each world's cache refill is now dispatched to its owning region thread via `FoliaScheduler.runForRegion()` (new `refillWorld()` method).
+* Corrected the Maven compiler plugin comment in `pom.xml` from "Java 17 support" to "Java 21 support" to match the actual `java.version=21`.
+* Added an `api-version` explanatory comment in `plugin.yml` clarifying the compile baseline and runtime compatibility range.
+* **`FoliaScheduler` safe-degradation fix**: when a reflective Folia handle failed to resolve, the methods previously fell back to the classic Bukkit scheduler, which throws `UnsupportedOperationException` on Folia. Every entry point now degrades to another Folia scheduler (`runForRegion` → global, `runForPlayer` → region, `runForPlayerLater` → global delayed, `runTimerGlobal` → async, `runAsync` → global) and never touches the classic scheduler on a Folia runtime.
+* **`GlobalRegionScheduler` one-shot support**: added reflective resolution of `run(Plugin, Runnable)` and `runDelayed(Plugin, Runnable, long)` so one-shot global tasks (used by the safe-degradation paths) can be scheduled; `runTimerGlobal` now distinguishes repeating (`period > 0`) from one-shot (`period <= 0`) tasks.
+* **`LocationCachePool` refill-guard fix**: the `isRefilling` guard was released before the per-world region tasks actually ran, allowing overlapping refill rounds to overfill the cache queues. The guard now covers the whole dispatch window (released on the next tick on Folia), and the per-world in-flight counters throttle concurrent searches.
+* **`TeleportService` stale-cache fix**: a cached location whose world is no longer loaded is now discarded before teleporting, preventing a failed `teleportAsync` on an unloaded world.
+* **`PlayerRespawnListener` stale-cache fix**: a cached respawn point whose world is unloaded is now discarded, avoiding a synchronous chunk load on the main thread during the respawn event.
+* **`SafeLocationFinder` sync-path thread fix**: when `async-search` is disabled, the synchronous search is now dispatched through `FoliaScheduler.runForRegion` instead of running inline, so it is safe when invoked from an async thread (e.g. the cache pool) and respects Folia thread confinement.
+* **`MessageManager` list `[noprefix]` fix**: the list branch of `sendMessage` now honours the `[noprefix]` marker, matching the single-line branch behaviour.
 
 ## [1.0.1] - 2026-10-01
-
-### 新增
-
-* **世界独立配置：初次进入世界时随机传送**：
-  * 在 `config.yml` 的 `worlds.<world>` 配置项中将 `first-join` 支持为包含子配置的对象格式（同时向下兼容纯布尔值）；
-  * 新增 `first-join.enabled`：控制初次进入该世界是否随机传送；
-  * 新增 `first-join.ignore-existing-playerdata`：控制如果存在该玩家的数据文件（如 `playerdata/*.dat`、`stats/*.json` 或已有游玩记录）则不实行随机传送，并在检测到老玩家文件时自动补齐该世界的 PDC 标记，彻底杜绝老玩家被误传送；
-  * 新增 `PlayerDataUtils` 模块，用于高性能校验玩家物理数据文件与原版记录；
-  * 新增 `PlayerWorldChangeListener` 监听跨世界事件，配合 PDC（`PersistentDataContainer`）持久化标记，实现玩家初次进入某个启用了该选项的世界时自动执行安全随机传送及给予保护；
-  * 在 `/as info` 管理员指令与多语言文件中新增 `{first_join}` 状态占位符，直观展示各世界初次传送启用情况。
-* **终端提示**：
-  * 新增未启用软依赖 hook（PlaceholderAPI / EssentialsX）时的终端友好跳过提示。
 
 ### Added
 
@@ -35,50 +70,6 @@ and uses [Semantic Versioning](https://semver.org/).
   * Added friendly console notifications when optional soft-dependency hooks (PlaceholderAPI / EssentialsX) are skipped.
 
 ## [1.0.0] - 2026-09-30
-
-### 新增
-
-* **0ms 极速异步重生缓存池**：
-  * 引入 `LocationCachePool` 后台多线程坐标预计算机制，常驻维护可配置容量的安全出生点队列，实现玩家死亡后 0ms 瞬间重生，彻底消除主线程因寻找安全区块造成的卡顿；
-  * 提供定时自动补充、使用即刻异步补全与 `/as cache` 强制刷新指令，支持根据闲置时间自动回收过热过旧的缓存坐标；
-  * 针对无预存安全点或突发高并发情况，设计平滑降级机制，优先将玩家就绪至世界备用重生点（`fallback-location`）并在后台安全投送。
-* **等面积环形概率密度分布**：
-  * 摒弃传统的简易极坐标均匀半径随机算法，引入等面积概率密度算法：$r = \sqrt{u \cdot (R_{max}^2 - R_{min}^2) + R_{min}^2}$；
-  * 确保玩家在内外环区域的落点概率分布密度严格一致，杜绝玩家在外围稀疏、近中心点扎堆的现象。
-* **三维全息安全判定引擎**：
-  * 实现 `SafetyValidator` 多维度安全判定，严苛过滤岩浆、水流、火焰、灵魂火、仙人掌、甜浆果丛、粉雪、凋零玫瑰、营火、压力板、绊线及各类陷阱方块；
-  * 深度适配 1.20.4+ / 1.21+ 现代试炼建筑方块，阻断试炼刷怪笼（`TRIAL_SPAWNER`）、宝库（`VAULT`）、幽匿感测体与幽匿尖啸体；
-  * 自动拦截危险海洋与虚空生物群系黑名单，并在主世界环境下智能跳过无阳光直射的黑暗深层洞穴，避免玩家出生即面临困境。
-* **防堵床与防连环击杀机制**：
-  * 提供 `override-bed` 与 `override-anchor` 配置项，支持强制接管原版床与下界重生锚点，杜绝水晶堵床连环轰炸恶性循环；
-  * 支持 `anarchyspawn.bypass` 豁免权限，允许特定管理人员保留原版床重生行为。
-* **PDC 跨世界出生持久化追踪**：
-  * 基于 Bukkit 原生 `PersistentDataContainer`（PDC）机制记录玩家在各世界的首次投送标记，无须绑定外部 MySQL/SQLite 数据库，杜绝连接泄露与 IO 阻塞风险。
-* **服务端语言与客户端语言独立配置**：
-  * 在 `config.yml` 中将 `server-language`（服务端后台日志与控制台提示）与 `client-default-language`（玩家默认回退语言）完全解耦分离；
-  * 自动识别客户端语言环境（`player.getLocale()`），内置提供简体中文（`zh_CN`）、繁体中文（`zh_TW`）以及英文（`en_US`）三大开箱即用语言包；
-  * 实现层级安全回退机制（目标语言 → 客户端默认语言 → 服务端语言），杜绝因新增字段未翻译而导致的控制台缺失报错。
-* **玩家客户端提示与控制台日志独立开关**：
-  * 在 `config.yml` 中新增 `notifications` 独立配置块，涵盖客户端聊天消息（`chat`）、详细卡片（`location-card`）、保护提示（`protection`）及备用点降级警告（`fallback-warning`）；
-  * 新增服务端后台日志独立记录开关（`console-log-first-join`、`console-log-respawn`），服主可按需开启或彻底静默后台日志；
-  * 优化后台日志去重：修复管理员游戏内监控通知（`[Respawn-Monitor]`）与控制台日志（`[Respawn]`）同时打印至后台的问题，并将控制台日志中的 `{biome}` 与 `{direction}` 严格绑定至服务端所设语言。
-* **多行详细坐标报告卡片**：
-  * 突破单行文本限制，`MessageManager` 原生支持 YAML 列表（List）多行解析，并提供 `{prefix}` 占位符避免多行列表边框被前缀干扰破坏；
-  * 在 `zh_CN.yml`、`zh_TW.yml` 和 `en_US.yml` 中新增 `spawn.first-join-location-info` 与 `spawn.respawn-location-info` 多行排版卡片；
-  * 内置生物群系本地化对照表（`biomes`）与八方位朝向词典（`directions`），支持 `{exact_x}`、`{exact_y}`、`{exact_z}`、`{biome}`、`{direction}`、`{distance}` 等全套占位符。
-* **Minecraft 1.16.5 至 26.2+ 全版本兼容**：
-  * 编写 `PaperCompatibility` 底层反射层，自动侦测 Paper / Purpur 原生异步区块加载（`getChunkAtAsync`）与异步传送（`teleportAsync`），纯 Spigot / CraftBukkit 环境自动平滑回退至主线程同步调度；
-  * 反射兼容 `World.getMinHeight()`，自动适配 1.18+ 负高度区间（-64 至 320）与 1.16.5 传统高度（0 至 256）；
-  * 完善药水效果类型别名映射表（`EFFECT_ALIASES`），向下兼容 1.16 ~ 1.20 传统药水名称。
-* **全套出生视听与防秒杀增益**：
-  * 支持自定义秒数出生无敌保护（Invulnerable & NoDamageTicks），并可在语言文件中配置开启与结束提醒；
-  * 支持配置出生药水增益列表（抗性提升、缓慢下落、防火、饱和等），防止高空坠落伤与刷怪秒杀；
-  * 支持传送音效播放、落地粒子生成（传送门粒子等）、屏幕中央 Title / Subtitle 标题以及 Actionbar 动作栏显示。
-* **PlaceholderAPI 变量拓展**：
-  * 注册 `%anarchyspawn%` 变量标识，支持获取玩家各世界出生状态（`%anarchyspawn_spawned%`、`%anarchyspawn_spawned_<world>%`）；
-  * 支持获取实时世界预存池数量（`%anarchyspawn_total_cached%`、`%anarchyspawn_cache_size_<world>%`）与内外环半径范围（`%anarchyspawn_min_radius_<world>%`、`%anarchyspawn_max_radius_<world>%`）。
-* **便捷管理指令与 Tab 补全**：
-  * 提供 `/as reload`（配置与语言热重载）、`/as tp`（随机传送指定玩家）、`/as setcenter`（动态修改中心坐标）、`/as info`（各世界状态监视）、`/as test`（单次坐标搜索基准测速）与 `/as cache`（预存池填充）。
 
 ### Added
 

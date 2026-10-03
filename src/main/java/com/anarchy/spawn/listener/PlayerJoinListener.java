@@ -2,9 +2,9 @@ package com.anarchy.spawn.listener;
 
 import com.anarchy.spawn.AnarchySpawn;
 import com.anarchy.spawn.config.WorldSpawnSettings;
+import com.anarchy.spawn.util.FoliaScheduler;
 import com.anarchy.spawn.util.PDCUtils;
 import com.anarchy.spawn.util.PlayerDataUtils;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -21,7 +21,8 @@ public class PlayerJoinListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerJoin(PlayerJoinEvent event) {
-        if (!plugin.getConfigManager().isFirstJoinEnabled()) return;
+        if (!plugin.getConfigManager().isFirstJoinEnabled())
+            return;
 
         Player player = event.getPlayer();
         String worldName = player.getWorld().getName();
@@ -41,7 +42,8 @@ public class PlayerJoinListener implements Listener {
                 PDCUtils.markSpawnedInWorld(player, worldName);
             }
             if (plugin.getConfigManager().isDebug()) {
-                plugin.getLogger().info("Player " + player.getName() + " has existing playerdata file; skipping first-join random spawn for world " + worldName);
+                plugin.getLogger().info("Player " + player.getName()
+                        + " has existing playerdata file; skipping first-join random spawn for world " + worldName);
             }
             return;
         }
@@ -57,13 +59,14 @@ public class PlayerJoinListener implements Listener {
         }
 
         int delay = plugin.getConfigManager().getFirstJoinDelayTicks();
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        FoliaScheduler.runForPlayerLater(plugin, player, () -> {
             if (player.isOnline() && !player.isDead()) {
                 WorldSpawnSettings currentSettings = plugin.getConfigManager().getWorldSettings(worldName);
                 if (currentSettings == null || !currentSettings.isEnabled() || !currentSettings.isFirstJoinEnabled()) {
                     return;
                 }
-                if (currentSettings.isIgnoreExistingPlayerData() && PlayerDataUtils.hasExistingPlayerData(player, player.getWorld())) {
+                if (currentSettings.isIgnoreExistingPlayerData()
+                        && PlayerDataUtils.hasExistingPlayerData(player, player.getWorld())) {
                     return;
                 }
                 if (plugin.getConfigManager().isTrackPerWorldPDC() && PDCUtils.hasSpawnedInWorld(player, worldName)) {

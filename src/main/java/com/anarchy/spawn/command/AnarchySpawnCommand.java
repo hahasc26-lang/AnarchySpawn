@@ -2,6 +2,7 @@ package com.anarchy.spawn.command;
 
 import com.anarchy.spawn.AnarchySpawn;
 import com.anarchy.spawn.config.WorldSpawnSettings;
+import com.anarchy.spawn.util.FoliaScheduler;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -22,7 +23,8 @@ public class AnarchySpawnCommand implements CommandExecutor {
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
+            @NotNull String[] args) {
         if (args.length == 0) {
             sendHelp(sender, label);
             return true;
@@ -111,7 +113,7 @@ public class AnarchySpawnCommand implements CommandExecutor {
         plugin.getMessageManager().sendMessage(sender, "command.tp-searching", null);
         final String finalWorldName = worldName;
         plugin.getTeleportService().teleportToRandomSpawn(target, worldName, false).thenAccept(success -> {
-            Bukkit.getScheduler().runTask(plugin, () -> {
+            FoliaScheduler.runForPlayer(plugin, target, () -> {
                 Map<String, String> p = new HashMap<>();
                 p.put("player", target.getName());
                 p.put("world", finalWorldName);
@@ -167,7 +169,7 @@ public class AnarchySpawnCommand implements CommandExecutor {
 
             // Invalidate existing cached points for this world and trigger refill
             plugin.getCachePool().clearWorldCache(settings.getWorldName());
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> plugin.getCachePool().refillAllWorlds());
+            FoliaScheduler.runAsync(plugin, () -> plugin.getCachePool().refillAllWorlds());
 
             Map<String, String> p = new HashMap<>();
             p.put("world", worldName);
@@ -205,7 +207,8 @@ public class AnarchySpawnCommand implements CommandExecutor {
             return;
         }
 
-        String worldName = args.length >= 2 ? args[1] : (sender instanceof Player ? ((Player) sender).getWorld().getName() : "world");
+        String worldName = args.length >= 2 ? args[1]
+                : (sender instanceof Player ? ((Player) sender).getWorld().getName() : "world");
         World world = Bukkit.getWorld(worldName);
         WorldSpawnSettings settings = plugin.getConfigManager().getWorldSettings(worldName);
 
@@ -222,7 +225,7 @@ public class AnarchySpawnCommand implements CommandExecutor {
         plugin.getMessageManager().sendMessage(sender, "command.test-searching", searchP);
 
         plugin.getLocationFinder().findSafeLocationAsync(world, settings).thenAccept(result -> {
-            Bukkit.getScheduler().runTask(plugin, () -> {
+            FoliaScheduler.runForRegion(plugin, world, () -> {
                 Map<String, String> p = new HashMap<>();
                 p.put("time_ms", String.valueOf(result.getDurationMs()));
                 p.put("attempts", String.valueOf(result.getAttempts()));
@@ -252,12 +255,19 @@ public class AnarchySpawnCommand implements CommandExecutor {
         Map<String, String> p = new HashMap<>();
         p.put("label", label);
 
-        plugin.getMessageManager().sendRawMessage(sender, plugin.getMessageManager().getFormatted(sender, "command.help-header", p));
-        plugin.getMessageManager().sendRawMessage(sender, plugin.getMessageManager().getFormatted(sender, "command.help-reload", p));
-        plugin.getMessageManager().sendRawMessage(sender, plugin.getMessageManager().getFormatted(sender, "command.help-tp", p));
-        plugin.getMessageManager().sendRawMessage(sender, plugin.getMessageManager().getFormatted(sender, "command.help-setcenter", p));
-        plugin.getMessageManager().sendRawMessage(sender, plugin.getMessageManager().getFormatted(sender, "command.help-info", p));
-        plugin.getMessageManager().sendRawMessage(sender, plugin.getMessageManager().getFormatted(sender, "command.help-test", p));
-        plugin.getMessageManager().sendRawMessage(sender, plugin.getMessageManager().getFormatted(sender, "command.help-cache", p));
+        plugin.getMessageManager().sendRawMessage(sender,
+                plugin.getMessageManager().getFormatted(sender, "command.help-header", p));
+        plugin.getMessageManager().sendRawMessage(sender,
+                plugin.getMessageManager().getFormatted(sender, "command.help-reload", p));
+        plugin.getMessageManager().sendRawMessage(sender,
+                plugin.getMessageManager().getFormatted(sender, "command.help-tp", p));
+        plugin.getMessageManager().sendRawMessage(sender,
+                plugin.getMessageManager().getFormatted(sender, "command.help-setcenter", p));
+        plugin.getMessageManager().sendRawMessage(sender,
+                plugin.getMessageManager().getFormatted(sender, "command.help-info", p));
+        plugin.getMessageManager().sendRawMessage(sender,
+                plugin.getMessageManager().getFormatted(sender, "command.help-test", p));
+        plugin.getMessageManager().sendRawMessage(sender,
+                plugin.getMessageManager().getFormatted(sender, "command.help-cache", p));
     }
 }

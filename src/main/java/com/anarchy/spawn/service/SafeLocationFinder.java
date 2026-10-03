@@ -2,9 +2,9 @@ package com.anarchy.spawn.service;
 
 import com.anarchy.spawn.AnarchySpawn;
 import com.anarchy.spawn.config.WorldSpawnSettings;
+import com.anarchy.spawn.util.FoliaScheduler;
 import com.anarchy.spawn.util.PaperCompatibility;
 import com.anarchy.spawn.util.SafetyValidator;
-import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -17,7 +17,8 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Searches for a safe location within the configured world radius.
- * Uses uniform annular area distribution: r = sqrt(u * (R_max^2 - R_min^2) + R_min^2)
+ * Uses uniform annular area distribution: r = sqrt(u * (R_max^2 - R_min^2) +
+ * R_min^2)
  */
 public class SafeLocationFinder {
 
@@ -29,7 +30,8 @@ public class SafeLocationFinder {
     }
 
     /**
-     * Asynchronously finds a safe location, falling back to world spawn if max attempts exceeded.
+     * Asynchronously finds a safe location, falling back to world spawn if max
+     * attempts exceeded.
      */
     public CompletableFuture<SearchResult> findSafeLocationAsync(World world, WorldSpawnSettings settings) {
         CompletableFuture<SearchResult> future = new CompletableFuture<>();
@@ -40,12 +42,18 @@ public class SafeLocationFinder {
         }
 
         if (!plugin.getConfigManager().isAsyncSearch()) {
-            try {
-                SearchResult syncResult = findSafeLocationSync(world, settings);
-                future.complete(syncResult);
-            } catch (Throwable t) {
-                future.complete(new SearchResult(settings.getFallbackLocation(world), 0, 0, false));
-            }
+            // The synchronous search touches chunks/blocks, so it must run on the
+            // owning world's region thread (Folia) or the main thread (Spigot/Paper).
+            // This method may be invoked from an async thread (e.g. the cache pool),
+            // so we always dispatch through FoliaScheduler instead of running inline.
+            FoliaScheduler.runForRegion(plugin, world, () -> {
+                try {
+                    SearchResult syncResult = findSafeLocationSync(world, settings);
+                    future.complete(syncResult);
+                } catch (Throwable t) {
+                    future.complete(new SearchResult(settings.getFallbackLocation(world), 0, 0, false));
+                }
+            });
             return future;
         }
 
@@ -64,7 +72,8 @@ public class SafeLocationFinder {
         }
     }
 
-    private void searchNextAttemptAsync(World world, WorldSpawnSettings settings, int currentAttempt, int maxAttempts, long startTime, CompletableFuture<SearchResult> future) {
+    private void searchNextAttemptAsync(World world, WorldSpawnSettings settings, int currentAttempt, int maxAttempts,
+            long startTime, CompletableFuture<SearchResult> future) {
         if (!plugin.isEnabled()) {
             future.complete(new SearchResult(null, currentAttempt, 0, false));
             return;
@@ -91,7 +100,7 @@ public class SafeLocationFinder {
                 future.complete(new SearchResult(null, currentAttempt, 0, false));
                 return;
             }
-            Bukkit.getScheduler().runTask(plugin, () -> {
+            FoliaScheduler.runForRegion(plugin, world, () -> {
                 if (!plugin.isEnabled()) {
                     future.complete(new SearchResult(null, currentAttempt, 0, false));
                     return;
@@ -102,7 +111,8 @@ public class SafeLocationFinder {
                     String biomeName = "UNKNOWN";
                     try {
                         biomeName = safeLoc.getBlock().getBiome().name();
-                    } catch (Throwable ignored) {}
+                    } catch (Throwable ignored) {
+                    }
                     future.complete(new SearchResult(safeLoc, currentAttempt, duration, true, biomeName));
                 } else {
                     if (plugin.isEnabled()) {
@@ -150,7 +160,8 @@ public class SafeLocationFinder {
                 String biomeName = "UNKNOWN";
                 try {
                     biomeName = safeLoc.getBlock().getBiome().name();
-                } catch (Throwable ignored) {}
+                } catch (Throwable ignored) {
+                }
                 return new SearchResult(safeLoc, attempt, duration, true, biomeName);
             }
         }
@@ -170,24 +181,28 @@ public class SafeLocationFinder {
             if (world.getEnvironment() == World.Environment.NETHER) {
                 maxY = Math.min(maxY, 120);
             }
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
 
         if (world.getWorldBorder() != null && !world.getWorldBorder().isInside(new Location(world, x, minY, z))) {
             return null;
         }
 
-        // Quick column biome pre-check (sample middle of column to skip blacklisted ocean biomes fast)
+        // Quick column biome pre-check (sample middle of column to skip blacklisted
+        // ocean biomes fast)
         try {
             Biome sampleBiome = world.getBiome(x, (maxY + minY) / 2, z);
             if (!SafetyValidator.isSafeBiome(plugin, sampleBiome)) {
                 return null;
             }
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
 
         boolean isOverworld = false;
         try {
             isOverworld = world.getEnvironment() == World.Environment.NORMAL;
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
 
         for (int y = maxY; y >= minY; y--) {
             Block ground = world.getBlockAt(x, y, z);
@@ -206,7 +221,8 @@ public class SafeLocationFinder {
                         if (feet.getLightFromSky() == 0 && y < 60) {
                             continue;
                         }
-                    } catch (Throwable ignored) {}
+                    } catch (Throwable ignored) {
+                    }
                 }
 
                 return new Location(world, x + 0.5, y + 1.0, z + 0.5);
@@ -235,10 +251,24 @@ public class SafeLocationFinder {
             this.biome = biome != null ? biome : "UNKNOWN";
         }
 
-        public Location getLocation() { return location; }
-        public int getAttempts() { return attempts; }
-        public long getDurationMs() { return durationMs; }
-        public boolean isSuccess() { return success; }
-        public String getBiome() { return biome; }
+        public Location getLocation() {
+            return location;
+        }
+
+        public int getAttempts() {
+            return attempts;
+        }
+
+        public long getDurationMs() {
+            return durationMs;
+        }
+
+        public boolean isSuccess() {
+            return success;
+        }
+
+        public String getBiome() {
+            return biome;
+        }
     }
 }

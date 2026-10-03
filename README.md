@@ -40,6 +40,7 @@
 | Server Core / Software | Compatibility | Recommendation |
 | :--- | :--- | :--- |
 | **Paper / Purpur** | Native Async Support | Highly Recommended (utilizes asynchronous chunk loading & teleportation without TPS drops) |
+| **Folia** | Native Regionized Scheduler | Fully Supported (all scheduling routed through `FoliaScheduler` with region-thread confinement) |
 | **Spigot / CraftBukkit** | Full Synchronous Support | Fully Supported (automatically switches to scheduled sync loading fallback) |
 | **Pufferfish / Gale / Leaves** | Native Async Support | Fully Supported |
 
@@ -58,6 +59,7 @@
 - **Equal-Area Annular Distribution**: Utilizes equal-area probability density sampling to ensure uniform player distribution across outer zones without clustering near the center.
 - **Holistic 3D Safety Validation**: Rigorous filtering against lava, underwater, cacti, sweet berries, powdered snow, portals, bedrock roofs/voids, dangerous ocean biomes, trial structures, and world borders.
 - **PaperMC Async Chunk Compatibility**: Native reflection support for Paper's asynchronous chunk loading with smooth fallback on Spigot, preserving 20 TPS.
+- **Folia Regionized Scheduler Support**: A unified `FoliaScheduler` abstraction layer auto-detects Folia at runtime and routes every scheduling call to the correct region thread (player / world / global), while transparently falling back to the classic scheduler on Paper/Spigot.
 - **Audiovisual & Anti-Instakill Protection**: Configurable invulnerability duration, potion effects (Resistance, Slow Falling, Fire Resistance), particle effects, sounds, titles, and actionbars.
 - **Ecosystem Integration**: Built-in soft dependency support for PlaceholderAPI and EssentialsX.
 
@@ -173,6 +175,7 @@
 | 服务端核心类型 | 兼容性支持 | 部署建议 |
 | :--- | :--- | :--- |
 | **Paper / Purpur** | 原生异步区块与传送 | **强烈推荐**（充分发挥异步区块加载与异步传送优势，确保 20 TPS 零卡顿） |
+| **Folia** | 原生区域化调度器 | **完美兼容**（所有调度统一经 `FoliaScheduler` 路由至正确的区域线程，严格遵循线程封闭约束） |
 | **Spigot / CraftBukkit** | 同步平滑回退支持 | **完美兼容**（自动侦测并回退至安全的主线程调度加载机制） |
 | **Pufferfish / Gale / Leaves** | 原生异步区块与传送 | **完美兼容** |
 
@@ -191,6 +194,7 @@
 - **等面积环形随机算法**：采用等面积概率密度采样，避免玩家在圆心区域扎堆。
 - **三维全息安全判定**：严苛过滤岩浆、水下、仙人掌、甜浆果、粉雪、传送门、基岩、海洋与各类危险方块，受限于世界边界。
 - **PaperMC 异步区块兼容**：内置反射自动适配 Paper 异步区块加载，纯 Spigot 环境平滑回退，保障 20 TPS。
+- **Folia 区域化调度器支持**：新增 `FoliaScheduler` 统一调度抽象层，运行时自动探测 Folia 并将所有调度调用路由至正确的区域线程（玩家 / 世界 / 全局），在 Paper / Spigot 上透明回退至经典调度器。
 - **完整视听与防秒杀增益**：支持无敌时间、药水效果（抗性提升、缓慢下落、防火等）、音效、粒子、Title 与 Actionbar。
 - **生态无缝对接**：支持 PlaceholderAPI 与 EssentialsX 软依赖拓展。
 

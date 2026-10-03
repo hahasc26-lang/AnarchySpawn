@@ -1,6 +1,8 @@
 name: AnarchySpawn
-version: '1.0.1'
+version: '1.0.3'
 main: com.anarchy.spawn.AnarchySpawn
+# Compiled against paper-api 1.20.4; runtime-compatible with 1.16.5 - 1.21.x
+# via a reflection-based compatibility layer (see PaperCompatibility / FoliaScheduler).
 api-version: '1.16'
 author: AnarchyDev
 description: High-performance Safe Random Spawn and Respawn System for Anarchy Servers
