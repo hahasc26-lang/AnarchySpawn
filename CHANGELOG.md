@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 > 中文版请见 [CHANGELOG_Chinese.md](CHANGELOG_Chinese.md).
 
+## [1.0.3] - 2026-10-04
+
+### Added
+- Add `safety-filter.enable-safe-spawn-check` (default: true) to toggle the built-in unsafe-block fallback check.
+- Add `ConfigManager.enableSafeSpawnCheck` field and getter; user-defined `unsafe-floor-materials` always applies.
+- Add hard-coded unsafe floor list in `SafetyValidator`: lava, fire, magma, cactus, powder snow, sweet berry bush, bedrock, slime block, wither rose, tripwire, pressure plates, scaffolding, honey block, pointed dripstone, anvil, trial spawner, vault, sculk shrieker, lightning rod, fences/walls/bars/panes/chains/lanterns, end portal frame, dragon egg, shulker box.
+
 ## [1.0.2] - 2026-10-03
 
 ### Added

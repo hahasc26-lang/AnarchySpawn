@@ -204,6 +204,10 @@ worlds:
 #                         Safety & Biome Filter Settings                         #
 # ============================================================================== #
 safety-filter:
+  # Whether to enforce the built-in safe spawn check.
+  # Hard-coded unsafe blocks (lava, fire, cactus, etc.) will always be excluded
+  # from random spawn point selection when this is enabled.
+  enforce-safe-spawn: true
   # Materials that players must NEVER spawn standing directly on top of
   unsafe-floor-materials:
     - "LAVA"

@@ -7,6 +7,13 @@
 
 > English version: [CHANGELOG.md](CHANGELOG.md).
 
+## [1.0.3] - 2026-10-04
+
+### 新增
+- 新增配置项 `safety-filter.enable-safe-spawn-check`（默认 true），控制是否启用内置危险方块保底检查。
+- `ConfigManager` 新增 `enableSafeSpawnCheck` 字段与 getter；用户自定义的 `unsafe-floor-materials` 不受开关影响，始终生效。
+- `SafetyValidator` 内置硬编码危险方块列表：岩浆、火、岩浆块、仙人掌、细雪、甜浆果丛、基岩、粘液块、凋零玫瑰、绊线、压力板、脚手架、蜂蜜块、尖石、铁砧、试炼刷怪笼、宝库、潜声感测器、避雷针、栅栏/墙/玻璃板/铁栏杆/锁链/灯笼、末地传送门框、龙蛋、潜影盒。
+
 ## [1.0.2] - 2026-10-03
 
 ### 新增

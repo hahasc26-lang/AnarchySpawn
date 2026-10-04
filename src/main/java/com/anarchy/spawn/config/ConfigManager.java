@@ -67,6 +67,7 @@ public class ConfigManager {
     private boolean serverLogRespawn;
 
     // Safety Filter
+    private boolean enableSafeSpawnCheck;
     private final Set<Material> unsafeFloorMaterials = EnumSet.noneOf(Material.class);
     private final Set<String> biomeBlacklist = new HashSet<>();
 
@@ -142,6 +143,8 @@ public class ConfigManager {
         this.serverLogRespawn = config.getBoolean("notifications.server.console-log-respawn", true);
 
         // Safety Filter Materials
+        this.enableSafeSpawnCheck = config.getBoolean("safety-filter.enforce-safe-spawn", true);
+
         this.unsafeFloorMaterials.clear();
         List<String> rawMaterials = config.getStringList("safety-filter.unsafe-floor-materials");
         for (String matName : rawMaterials) {
@@ -241,6 +244,7 @@ public class ConfigManager {
     public boolean isClientFallbackWarningEnabled() { return clientFallbackWarningEnabled; }
     public boolean isServerLogFirstJoin() { return serverLogFirstJoin; }
     public boolean isServerLogRespawn() { return serverLogRespawn; }
+    public boolean isEnableSafeSpawnCheck() { return enableSafeSpawnCheck; }
     public Set<Material> getUnsafeFloorMaterials() { return unsafeFloorMaterials; }
     public Set<String> getBiomeBlacklist() { return biomeBlacklist; }
 }
