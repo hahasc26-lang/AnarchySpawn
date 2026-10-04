@@ -2,11 +2,13 @@
 
 # AnarchySpawn
 
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.16.5--26.2-brightgreen?style=flat-square)](https://papermc.io/)
-[![Java](https://img.shields.io/badge/Java-17%20%7C%2021-orange?style=flat-square&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
-[![Build](https://img.shields.io/badge/Build-Maven-blue?style=flat-square&logo=apachemaven&logoColor=white)](https://maven.apache.org/)
-[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Paper%20%7C%20Purpur%20%7C%20Spigot%20%7C%20Bukkit-purple?style=flat-square)](https://papermc.io/)
+<p align="center">
+  <img src="https://img.shields.io/badge/Minecraft-1.16.5--26.2-brightgreen?style=flat-square" alt="Minecraft">
+  <img src="https://img.shields.io/badge/Java-17%20%7C%2021-orange?style=flat-square&logo=openjdk&logoColor=white" alt="Java">
+  <img src="https://img.shields.io/badge/Build-Maven-blue?style=flat-square&logo=apachemaven&logoColor=white" alt="Build">
+  <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License">
+  <img src="https://img.shields.io/badge/Platform-Paper%20%7C%20Purpur%20%7C%20Spigot%20%7C%20Bukkit-purple?style=flat-square" alt="Platform">
+</p>
 
 <p align="center">
   <a href="https://ko-fi.com/X5Z326V65O"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="ko-fi"></a>
