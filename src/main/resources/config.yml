@@ -163,7 +163,6 @@ worlds:
     min-radius: 0
     # Maximum outer radius in blocks from center (outer boundary of spawn ring)
     max-radius: 500
-    
     # Minimum Y coordinate for safe ground searches (1.18+ Overworld: -64, older versions: 0).
     min-y: -64
     # Maximum Y coordinate for safe ground searches (1.18+ Overworld: 320, older versions: 256).
@@ -223,13 +222,10 @@ safety-filter:
     - "SOUL_CAMPFIRE"
     - "NETHER_PORTAL"
     - "END_PORTAL"
-    - "BEDROCK"
     - "AIR"
     - "CAVE_AIR"
     - "VOID_AIR"
     - "COBWEB"
-    - "TRIPWIRE"
-    - "PRESSURE_PLATE"
     - "POINTED_DRIPSTONE"
     - "TRIAL_SPAWNER"
     - "VAULT"
