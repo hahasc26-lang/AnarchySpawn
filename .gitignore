@@ -27,13 +27,3 @@ Thumbs.db
 *.tmp
 *.bak
 
-# Web preview / AI Studio runtime (Excluded from GitHub)
-node_modules/
-dist/
-package.json
-package-lock.json
-server.js
-index.html
-.env
-.env.*
-

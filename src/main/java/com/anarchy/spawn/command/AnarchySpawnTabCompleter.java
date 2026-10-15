@@ -43,9 +43,9 @@ public class AnarchySpawnTabCompleter implements TabCompleter {
                     }
                 }
             } else if ((sub.equals("setcenter") || sub.equals("test")) && (sender.hasPermission("anarchyspawn." + sub) || sender.hasPermission("anarchyspawn.admin"))) {
-                for (String wName : plugin.getConfigManager().getAllWorldSettings().keySet()) {
-                    if (wName.toLowerCase().startsWith(args[1].toLowerCase())) {
-                        completions.add(wName);
+                for (com.anarchy.spawn.config.WorldSpawnSettings s : plugin.getConfigManager().getAllWorldSettings().values()) {
+                    if (s.getWorldName().toLowerCase().startsWith(args[1].toLowerCase())) {
+                        completions.add(s.getWorldName());
                     }
                 }
             }
@@ -53,9 +53,9 @@ public class AnarchySpawnTabCompleter implements TabCompleter {
 
         if (args.length == 3) {
             if (args[0].equalsIgnoreCase("tp") && (sender.hasPermission("anarchyspawn.tp") || sender.hasPermission("anarchyspawn.admin"))) {
-                for (String wName : plugin.getConfigManager().getAllWorldSettings().keySet()) {
-                    if (wName.toLowerCase().startsWith(args[2].toLowerCase())) {
-                        completions.add(wName);
+                for (com.anarchy.spawn.config.WorldSpawnSettings s : plugin.getConfigManager().getAllWorldSettings().values()) {
+                    if (s.getWorldName().toLowerCase().startsWith(args[2].toLowerCase())) {
+                        completions.add(s.getWorldName());
                     }
                 }
             } else if (args[0].equalsIgnoreCase("setcenter") && (sender.hasPermission("anarchyspawn.setcenter") || sender.hasPermission("anarchyspawn.admin"))) {

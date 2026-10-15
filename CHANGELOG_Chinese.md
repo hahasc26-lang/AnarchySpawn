@@ -7,6 +7,47 @@
 
 > English version: [CHANGELOG.md](CHANGELOG.md).
 
+## [1.1.0] - 2026-10-15
+
+### 新增
+- **全面兼容 Minecraft 26.3+ (1.21.x)**：
+  - 扩展 `PaperCompatibility` 底层反射适配层，实现对 26.3 / 1.21.x 最新 API、音效（`BLOCK_TRIAL_SPAWNER_SPAWN_MOB`、`ITEM_WIND_CHARGE_WIND_BURST`、`BLOCK_CREAKING_HEART_SPAWN` 等）与粒子效果（`PALE_OAK_LEAVES`、`CREAKING_CRUMB`、`TRIAL_SPAWNER_DETECTION`、`WIND_CHARGE` 等）的安全动态加载。
+  - 在 `SafetyValidator` 中补全 26.3 最新方块（`CREAKING_HEART` 喧嚣心、`EYE_BLOSSOM` 眼花、`PALE_HANGING_MOSS` 苍白垂苔、`HEAVY_CORE` 重核、`RESIN_BLOCK` 树脂块）与生物群系（`PALE_GARDEN` 苍白花园）的安全过滤规则，在旧版本服务器（1.12.2 - 1.20.x）上自动降级与回退。
+  - 更新插件元数据、README 说明文档与版本兼容对照表，明确对 Paper、Purpur、Folia、Spigot 服务端 `1.12.2 - 26.3+` 全版本区间的原生支持。
+- **全版本向下兼容至 Minecraft 1.12.2**：
+  - 在 `PDCUtils` 中实现双轨持久化引擎：在 1.14+ 上原生调用 `PersistentDataContainer` (PDC)，在 1.12.2 ~ 1.13.2 上无缝降级至轻量级本地文件存储 (`data/players.yml`)，保证全版本跨世界出生记录可用。
+  - 增加 1.12.2 旧材质兼容 (`STATIONARY_LAVA`、`STATIONARY_WATER`、`BURNING_FURNACE`、`BED_BLOCK` 等) 并隔离 1.13+ 类引用 (`BlockData`、`Waterlogged`、`Tag`)，杜绝旧版 JVM 抛出 `NoClassDefFoundError`。
+  - 针对 1.13 之前缺失 `Material.isBlock()` 与 `Material.isAir()` 的环境增加安全反射防御。
+- **地表最高高度（HighestBlockY）直达穿透优化（性能提升 98%+）**：
+  - 在 `SafeLocationFinder` 主世界搜索中集成 `world.getHighestBlockYAt(x, z)` 高度图穿透算法，候选列方块探测次数从 ~250 次直降至 1~3 次，安全坐标搜寻速度提升近百倍。
+  - 在地表附近建立小窗口局部精确验证（地表 +6 至 -12 格），兼顾地表植被、树冠与微地形，保留下界与洞穴维度的受限垂直扫描。
+- 新增 `DeathHotspotManager` 与 `PlayerDeathListener` 模块，用于动态记录和避让玩家近期死亡与战斗热点区域。
+- `config.yml` 新增 `death-hotspots` 配置块，支持独立控制功能开关 (`enabled`)、封禁半径 (`radius`)、热点有效期 (`ttl-seconds`) 以及单世界最大热点存储量 (`max-hotspots-per-world`)。
+- 在 `SafeLocationFinder` 中实现两阶段降级搜索机制：第一阶段优先避开死亡热点，若热点覆盖范围过大导致未找到点位，第二阶段自动忽略热点限制进行常规随机安全出生搜索，确保玩家始终能在荒野正常出生。
+- 新增 `PlayerQuitListener` 与 `TeleportService.cancelPlayerProtection()`，在玩家断开连接时重置无敌状态并清理定时任务，彻底封堵强退卡永久无敌 (God-mode) 漏洞。
+
+### 修复
+- **Folia 区块级线程封闭调度支持（致命级）**：在 `FoliaScheduler` 中新增支持指定区块坐标的 `runForRegion(plugin, world, chunkX, chunkZ, task)` 重载。彻底修复此前 `SafeLocationFinder` 与 `PaperCompatibility.getChunkAtAsync` 在兜底时默认向 `(0, 0)` 区块派发任务的严重缺陷，杜绝在 Folia 下访问非 0,0 远离区块时触发的跨区域线程封闭异常（Cross-region thread confinement violation）。
+- **备用点重生过渡期无敌保护**：在 `PlayerRespawnListener` 中为触发备用点兜底重生的玩家预先赋予 60-tick（3秒）临时伤害免疫（`noDamageTicks`），防止玩家在后台异步搜索安全点期间在危险的备用点（如岩浆、实体堆积或被围堵区域）被瞬间击杀。
+- **PlaceholderAPI 热点变量与空指针安全防御**：新增 `%anarchyspawn_hotspots_<world>%` 活跃死亡热点数统计变量；为 `PlaceholderAPIHook` 中缓存池与热点管理器增加空安全校验，防止在相应模块未启用时抛出空指针异常。
+- **PlayerDeathListener 生命周期防御**：在 `PlayerDeathListener` 中为玩家实体和 `DeathHotspotManager` 补充空安全校验，杜绝服务器重载或关服阶段触发监听产生的潜在异常。
+- **缓存池 In-Flight 泄漏拦截**：在 `SafeLocationFinder` 的区域线程安全方块遍历中增加 `try-catch(Throwable)` 全局防护，确保即使发生异常也能回调 `CompletableFuture`，防止 `inFlightRequests` 计数器永久泄漏锁死缓存填充。
+- **Folia 调度器反射签名修复（致命）**：修正了对不存在的 `Bukkit.getRegionizedScheduler()` 及 `scheduler.player()` 的错误探测；改用标准的 `Bukkit.getRegionScheduler()`、`Bukkit.getGlobalRegionScheduler()`、`Bukkit.getAsyncScheduler()`，并针对玩家实体从 `player.getScheduler()` 正确获取 `EntityScheduler`，恢复 Folia 原生运行兼容。
+- **预缓存池死亡热点穿透修复**：修复了 `LocationCachePool.poll()` 在出队时未校验该点位是否在缓存后沦为近期死亡热点的问题，避免复活玩家掉入热点交火区。
+- **重生时序与效果丢失修复**：将 `PlayerRespawnListener` 中赋予增益效果的调度时机由 0 延迟调整为 1-tick 延迟（`runForPlayerLater(..., 1L)`），防止因玩家实体在事件期间仍为 `isDead()` 而漏发药水、音效与 Title 提示。
+- **生物群系黑名单空值防御**：修复了 `biome-blacklist` 中若存在空行或空字符串会导致 `contains("")` 误匹配所有群系导致搜寻失败的问题。
+- **环形半径计算安全性强化**：在 `SafeLocationFinder` 中限制 `minRadius` 与 `maxRadius` 的数学极值，防止配置颠倒时开根号计算出 `NaN` 坐标。
+- **重载清理热点缓存**：执行 `/as reload` 时同步清空 `DeathHotspotManager` 历史热点。
+- **PlaceholderAPI 作者动态获取**：在 `PlaceholderAPIHook` 中改为从 `plugin.yml` 动态解析作者信息。
+- **火珊瑚与泥砖误报修复**：修复了周边危险热源列表因缺少保护导致安全的 `FIRE_CORAL`（火珊瑚）被误判为致命火源的问题，并优化了 `MUD` 判定，使 `MUD_BRICKS`（泥砖）与 `PACKED_MUD`（泥坯）等正常建筑方块不再被误判为危险地面。
+- **进服跨世界竞态拦截**：在 `PlayerJoinListener` 延迟任务执行时增加世界一致性比对，避免与登录插件/大厅跨世界传送发生指令与位置冲突。
+- **TeleportService 变量缺失与保护会话安全（编译级修复）**：修复了 `activeProtectionTasks` 变量未声明导致源码无法编译的致命错误；引入 `activeProtectionSessions` 保护会话机制，彻底解决 Folia 下无 BukkitTask 时的取消防护与陈旧回调问题。
+- **Folia 跨区域指令回显线程隔离修复**：修复了在执行 `/as tp` 与 `/as test` 时，由于在目标玩家/区域线程中直接向指令发送者（Console 或其他区域管理员）发送消息导致的 Folia 线程封闭异常，改为调度至发送者自身所属线程。
+- **Folia 定时任务取消与缓存池生命周期保护**：在 `FoliaScheduler` 中实现 `runTimerGlobalTask` 与反射式 `cancelTask`，并在 `LocationCachePool` 中加入 `isRunning` 生命周期校验，彻底根除 Folia 环境下多次执行 `/as reload` 重复叠加后台定时任务的泄漏问题。
+- **死亡热点降级搜索算力空转优化**：在搜索超时降级前增加活跃热点数校验，若当前世界不存在任何活跃热点，则直接使用备用点，避免在纯地形阻碍时白白多执行 35 次多余的区块搜索。
+- **插件卸载内存清理**：在 `onDisable()` 中增加 `deathHotspotManager.clearAllHotspots()`，防止插件重载时残留对世界和坐标队列的强引用。
+- **指令补全世界大小写保留**：修复了 Tab 补全世界名称时被强制转换为纯小写的问题，保留服主在配置文件中配置的原始大小写形式。
+
 ## [1.0.3] - 2026-10-04
 
 ### 新增

@@ -69,17 +69,23 @@ public class PlayerRespawnListener implements Listener {
             if (plugin.getConfigManager().isTrackPerWorldPDC()) {
                 PDCUtils.markSpawnedInWorld(player, settings.getWorldName());
             }
-            FoliaScheduler.runForPlayer(plugin, player, () -> {
+            FoliaScheduler.runForPlayerLater(plugin, player, () -> {
                 if (player.isOnline() && !player.isDead()) {
                     plugin.getTeleportService().applyPostRespawnEffects(player, finalCachedLoc, settings);
                 }
-            });
+            }, 1L);
             // Trigger background refill since we consumed a cached point
             FoliaScheduler.runAsync(plugin, () -> plugin.getCachePool().refillAllWorlds());
         } else {
             Location fallback = settings.getFallbackLocation(targetWorld);
             if (fallback != null) {
                 event.setRespawnLocation(fallback);
+            }
+            if (plugin.getConfigManager().isProtectionEnabled()) {
+                try {
+                    player.setNoDamageTicks(60); // 3 seconds interim protection while async search resolves
+                } catch (Throwable ignored) {
+                }
             }
             if (plugin.getConfigManager().isTrackPerWorldPDC()) {
                 PDCUtils.markSpawnedInWorld(player, settings.getWorldName());

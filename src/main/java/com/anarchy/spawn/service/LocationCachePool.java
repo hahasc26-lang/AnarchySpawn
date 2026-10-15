@@ -21,7 +21,8 @@ public class LocationCachePool {
     private final Map<String, Queue<CachedLocation>> pool = new ConcurrentHashMap<>();
     private final Map<String, AtomicInteger> inFlightRequests = new ConcurrentHashMap<>();
     private final AtomicBoolean isRefilling = new AtomicBoolean(false);
-    private BukkitTask refillTask;
+    private Object refillTaskHandle;
+    private volatile boolean isRunning = false;
 
     public LocationCachePool(AnarchySpawn plugin) {
         this.plugin = plugin;
@@ -31,8 +32,9 @@ public class LocationCachePool {
         if (!plugin.getConfigManager().isCacheEnabled())
             return;
 
+        this.isRunning = true;
         long intervalTicks = plugin.getConfigManager().getCacheRefillIntervalSeconds() * 20L;
-        this.refillTask = FoliaScheduler.runTimerGlobal(plugin, this::refillAllWorlds, 20L, intervalTicks);
+        this.refillTaskHandle = FoliaScheduler.runTimerGlobalTask(plugin, this::refillAllWorlds, 20L, intervalTicks);
     }
 
     public void restartScheduler() {
@@ -43,9 +45,10 @@ public class LocationCachePool {
     }
 
     public void shutdown() {
-        if (refillTask != null) {
-            refillTask.cancel();
-            refillTask = null;
+        this.isRunning = false;
+        if (refillTaskHandle != null) {
+            FoliaScheduler.cancelTask(refillTaskHandle);
+            refillTaskHandle = null;
         }
         pool.clear();
         inFlightRequests.clear();
@@ -64,7 +67,17 @@ public class LocationCachePool {
         while (!queue.isEmpty()) {
             CachedLocation cached = queue.poll();
             if (cached != null && (now - cached.getTimestamp()) <= maxAgeMs) {
-                return cached.getLocation();
+                Location loc = cached.getLocation();
+                if (loc != null && plugin.getDeathHotspotManager() != null &&
+                        plugin.getDeathHotspotManager().isNearHotspot(worldName, loc.getX(), loc.getZ())) {
+                    if (plugin.getConfigManager().isDebug()) {
+                        plugin.getLogger().info(String.format(
+                                "[CachePool] Discarded cached point in '%s' (X:%.1f, Z:%.1f) because it became a death hotspot.",
+                                worldName, loc.getX(), loc.getZ()));
+                    }
+                    continue;
+                }
+                return loc;
             }
         }
         return null;
@@ -101,7 +114,7 @@ public class LocationCachePool {
     }
 
     public void refillAllWorlds() {
-        if (!plugin.getConfigManager().isCacheEnabled() || !plugin.isEnabled())
+        if (!isRunning || !plugin.getConfigManager().isCacheEnabled() || !plugin.isEnabled())
             return;
         // The guard is released only after every per-world region task has finished
         // dispatching its async searches, preventing overlapping refill rounds that

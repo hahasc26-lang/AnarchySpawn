@@ -40,6 +40,12 @@ public class ConfigManager {
     private int cacheRefillIntervalSeconds;
     private int maxCacheAgeSeconds;
 
+    // Death Hotspots Avoidance
+    private boolean deathHotspotEnabled;
+    private double deathHotspotRadius;
+    private int deathHotspotTtlSeconds;
+    private int deathHotspotMaxPerWorld;
+
     // Spawn Effects
     private boolean protectionEnabled;
     private int invulnerableSeconds;
@@ -115,6 +121,12 @@ public class ConfigManager {
         this.cacheRefillIntervalSeconds = Math.max(3, config.getInt("cache-pool.refill-interval-seconds", 10));
         this.maxCacheAgeSeconds = Math.max(60, config.getInt("cache-pool.max-cache-age-seconds", 1800));
 
+        // Death Hotspots Avoidance
+        this.deathHotspotEnabled = config.getBoolean("death-hotspots.enabled", true);
+        this.deathHotspotRadius = Math.max(10.0, config.getDouble("death-hotspots.radius", 250.0));
+        this.deathHotspotTtlSeconds = Math.max(10, config.getInt("death-hotspots.ttl-seconds", 300));
+        this.deathHotspotMaxPerWorld = Math.max(5, config.getInt("death-hotspots.max-hotspots-per-world", 50));
+
         // Spawn Effects
         this.protectionEnabled = config.getBoolean("spawn-effects.protection.enabled", true);
         this.invulnerableSeconds = Math.max(0, config.getInt("spawn-effects.protection.invulnerable-seconds",
@@ -168,7 +180,9 @@ public class ConfigManager {
         // Biome Blacklist
         this.biomeBlacklist.clear();
         for (String biome : config.getStringList("safety-filter.biome-blacklist")) {
-            this.biomeBlacklist.add(biome.toUpperCase());
+            if (biome != null && !biome.trim().isEmpty()) {
+                this.biomeBlacklist.add(biome.trim().toUpperCase());
+            }
         }
 
         // Multi-World Settings
@@ -222,6 +236,10 @@ public class ConfigManager {
     public int getCacheTargetSize() { return cacheTargetSize; }
     public int getCacheRefillIntervalSeconds() { return cacheRefillIntervalSeconds; }
     public int getMaxCacheAgeSeconds() { return maxCacheAgeSeconds; }
+    public boolean isDeathHotspotEnabled() { return deathHotspotEnabled; }
+    public double getDeathHotspotRadius() { return deathHotspotRadius; }
+    public int getDeathHotspotTtlSeconds() { return deathHotspotTtlSeconds; }
+    public int getDeathHotspotMaxPerWorld() { return deathHotspotMaxPerWorld; }
     public boolean isProtectionEnabled() { return protectionEnabled; }
     public int getInvulnerableSeconds() { return invulnerableSeconds; }
     public List<String> getPotionEffects() { return potionEffects; }

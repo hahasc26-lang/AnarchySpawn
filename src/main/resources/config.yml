@@ -159,7 +159,7 @@ worlds:
     center:
       x: 0
       z: 0
-    # Minimum inner radius in blocks from center (keeps players away from spawn traps)
+    # Minimum inner radius in blocks from center (keeps players away from 0,0 spawn traps)
     min-radius: 0
     # Maximum outer radius in blocks from center (outer boundary of spawn ring)
     max-radius: 500
@@ -223,7 +223,6 @@ safety-filter:
     - "SOUL_CAMPFIRE"
     - "NETHER_PORTAL"
     - "END_PORTAL"
-    - "BEDROCK"
     - "AIR"
     - "CAVE_AIR"
     - "VOID_AIR"
@@ -231,9 +230,6 @@ safety-filter:
     - "TRIPWIRE"
     - "PRESSURE_PLATE"
     - "POINTED_DRIPSTONE"
-    - "TRIAL_SPAWNER"
-    - "VAULT"
-    - "SCULK_SHRIEKER"
     
   # Biomes where random spawn searches will immediately skip to avoid drowning or void deaths
   biome-blacklist:
@@ -247,3 +243,22 @@ safety-filter:
     - "DEEP_COLD_OCEAN"
     - "DEEP_FROZEN_OCEAN"
     - "THE_VOID"
+
+# ============================================================================== #
+#            Death Hotspots & Combat Avoidance (PVP & Trap Protection)           #
+# Dynamically tracks recent death coordinates and blacklists surrounding zones    #
+# to prevent newly spawning or respawning players from landing in PvP traps.     #
+# ============================================================================== #
+death-hotspots:
+  # Enable dynamic avoidance of recent death / combat hotspot coordinates
+  enabled: true
+
+  # Blacklist radius in blocks around recent death locations
+  radius: 10.0
+
+  # Expiration duration in seconds for tracked death hotspots
+  ttl-seconds: 300
+
+  # Maximum number of active hotspots tracked per world
+  max-hotspots-per-world: 50
+

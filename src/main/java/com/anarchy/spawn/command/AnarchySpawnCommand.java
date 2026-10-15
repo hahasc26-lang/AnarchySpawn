@@ -126,10 +126,13 @@ public class AnarchySpawnCommand implements CommandExecutor {
                     p.put("y", "0");
                     p.put("z", "0");
                 }
-                if (success) {
-                    plugin.getMessageManager().sendMessage(sender, "command.tp-success", p);
+                String msgPath = success ? "command.tp-success" : "command.tp-failed";
+                if (sender instanceof Player) {
+                    FoliaScheduler.runForPlayer(plugin, (Player) sender, () -> {
+                        plugin.getMessageManager().sendMessage(sender, msgPath, p);
+                    });
                 } else {
-                    plugin.getMessageManager().sendMessage(sender, "command.tp-failed", p);
+                    plugin.getMessageManager().sendMessage(sender, msgPath, p);
                 }
             });
         });
@@ -225,20 +228,24 @@ public class AnarchySpawnCommand implements CommandExecutor {
         plugin.getMessageManager().sendMessage(sender, "command.test-searching", searchP);
 
         plugin.getLocationFinder().findSafeLocationAsync(world, settings).thenAccept(result -> {
-            FoliaScheduler.runForRegion(plugin, world, () -> {
-                Map<String, String> p = new HashMap<>();
-                p.put("time_ms", String.valueOf(result.getDurationMs()));
-                p.put("attempts", String.valueOf(result.getAttempts()));
-                if (result.isSuccess() && result.getLocation() != null) {
-                    p.put("x", String.valueOf(result.getLocation().getBlockX()));
-                    p.put("y", String.valueOf(result.getLocation().getBlockY()));
-                    p.put("z", String.valueOf(result.getLocation().getBlockZ()));
-                    p.put("biome", result.getBiome());
-                    plugin.getMessageManager().sendMessage(sender, "command.test-result", p);
-                } else {
-                    plugin.getMessageManager().sendMessage(sender, "command.test-failed", p);
-                }
-            });
+            Map<String, String> p = new HashMap<>();
+            p.put("time_ms", String.valueOf(result.getDurationMs()));
+            p.put("attempts", String.valueOf(result.getAttempts()));
+            boolean success = result.isSuccess() && result.getLocation() != null;
+            if (success) {
+                p.put("x", String.valueOf(result.getLocation().getBlockX()));
+                p.put("y", String.valueOf(result.getLocation().getBlockY()));
+                p.put("z", String.valueOf(result.getLocation().getBlockZ()));
+                p.put("biome", result.getBiome());
+            }
+            String msgPath = success ? "command.test-result" : "command.test-failed";
+            if (sender instanceof Player) {
+                FoliaScheduler.runForPlayer(plugin, (Player) sender, () -> {
+                    plugin.getMessageManager().sendMessage(sender, msgPath, p);
+                });
+            } else {
+                plugin.getMessageManager().sendMessage(sender, msgPath, p);
+            }
         });
     }
 

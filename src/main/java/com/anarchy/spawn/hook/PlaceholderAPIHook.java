@@ -36,7 +36,7 @@ public class PlaceholderAPIHook extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getAuthor() {
-        return "AnarchyDev";
+        return plugin.getDescription().getAuthors().isEmpty() ? "haha" : String.join(", ", plugin.getDescription().getAuthors());
     }
 
     @Override
@@ -70,12 +70,19 @@ public class PlaceholderAPIHook extends PlaceholderExpansion {
         }
 
         if (lower.equals("total_cached")) {
-            return String.valueOf(plugin.getCachePool().getTotalCacheSize());
+            return plugin.getCachePool() != null ? String.valueOf(plugin.getCachePool().getTotalCacheSize()) : "0";
         }
 
         if (lower.startsWith("cache_size_")) {
             String worldName = lower.substring("cache_size_".length());
-            return String.valueOf(plugin.getCachePool().getCacheSize(worldName));
+            return plugin.getCachePool() != null ? String.valueOf(plugin.getCachePool().getCacheSize(worldName)) : "0";
+        }
+
+        if (lower.startsWith("hotspots_")) {
+            String worldName = lower.substring("hotspots_".length());
+            return plugin.getDeathHotspotManager() != null
+                    ? String.valueOf(plugin.getDeathHotspotManager().getActiveHotspotsCount(worldName))
+                    : "0";
         }
 
         if (lower.startsWith("min_radius_")) {

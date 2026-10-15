@@ -3,8 +3,8 @@
 # AnarchySpawn
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Minecraft-1.16.5--26.2-brightgreen?style=flat-square" alt="Minecraft">
-  <img src="https://img.shields.io/badge/Java-17%20%7C%2021-orange?style=flat-square&logo=openjdk&logoColor=white" alt="Java">
+  <img src="https://img.shields.io/badge/Minecraft-1.12.2--26.3+-brightgreen?style=flat-square" alt="Minecraft">
+  <img src="https://img.shields.io/badge/Java-8%20%7C%2017%20%7C%2021-orange?style=flat-square&logo=openjdk&logoColor=white" alt="Java">
   <img src="https://img.shields.io/badge/Build-Maven-blue?style=flat-square&logo=apachemaven&logoColor=white" alt="Build">
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/Platform-Paper%20%7C%20Purpur%20%7C%20Spigot%20%7C%20Bukkit-purple?style=flat-square" alt="Platform">
@@ -33,9 +33,10 @@
 
 | Minecraft Version | Compatibility Status | Compatibility Details |
 | :--- | :--- | :--- |
-| **1.20.x - 26.2+** | Full Support (Native) | Full support for modern height limits (-64 to 320), modern potions, and trial structure safety filters (Trial Spawners, Vaults, Sculk Shriekers). |
+| **1.20.x - 26.3+** | Full Support (Native) | Full support for modern height limits (-64 to 320), modern potions, trial structures, and 26.3 pale garden features (Creaking Heart, Heavy Core, Pale Oak). |
 | **1.18.x - 1.19.x** | Full Support | Seamless support for caves & cliffs height limits and ancient city biome detection. |
 | **1.16.5 - 1.17.x** | Full Support (Legacy) | Automatic fallback to height 0 base and legacy potion effect aliases (`DAMAGE_RESISTANCE`, `INCREASE_DAMAGE`, etc.). |
+| **1.12.2 - 1.15.x** | Full Support (Legacy) | Automatic fallback from PDC to local dual-track storage (`data/players.yml`), legacy Material system mapping (`STATIONARY_LAVA`), and Classloader insulation. |
 
 <br>
 
@@ -52,16 +53,18 @@
 
 ## Features
 
-- **Broad Version Compatibility (1.16.5 - 26.2+)**: Built-in runtime reflection layer that safely adapts across legacy and modern Minecraft releases without NoSuchMethod crashes.
+- **Broad Version Compatibility (1.12.2 - 26.3+)**: Built-in runtime reflection layer and dual-track persistence that safely adapts across legacy (1.12.2) and modern Minecraft releases without NoSuchMethod crashes.
+- **Surface Direct Penetration & 98%+ Search Acceleration**: Directly queries surface heightmaps (`getHighestBlockYAt`) in Overworld terrain, dropping candidate column block checks from ~250 down to 1~3 iterations.
 - **Standalone Multi-Language System & Client Locale Auto-Detection**: Language files are organized in a dedicated `languages/` directory (`en_US.yml`, `zh_CN.yml`, `zh_TW.yml`). Messages automatically adapt to each player's client language.
 - **First-Join Safe Drop & Per-World Control**: Delays teleportation upon first join or dimension entry to safely dispatch players into configured ring wilderness zones. Each world can independently toggle first-join random spawn (`first-join: true/false`).
-- **PDC Persistent Tracking**: Uses `PersistentDataContainer` (supported since 1.14+) to track spawn history per world without external database dependencies or memory leaks.
+- **PDC & Dual-Track Tracking**: Uses `PersistentDataContainer` on 1.14+ and automatic file fallback on 1.12.2 - 1.13.2 to track spawn history per world without external database dependencies or memory leaks.
 - **Zero-Delay Respawn Cache Pool**: Background async tasks pre-search and maintain a pool of safe locations (`LocationCachePool`) for instant respawn upon death.
 - **Bed & Respawn Anchor Override**: Option to override vanilla beds and respawn anchors to prevent bed-trapping and spawn-kill cycles.
 - **Equal-Area Annular Distribution**: Utilizes equal-area probability density sampling to ensure uniform player distribution across outer zones without clustering near the center.
+- **Dynamic Death Hotspot Avoidance**: Automatically avoids recent death/PvP zones to prevent spawn camping and crystal traps, with seamless fallback.
 - **Holistic 3D Safety Validation**: Rigorous filtering against lava, underwater, cacti, sweet berries, powdered snow, portals, bedrock roofs/voids, dangerous ocean biomes, trial structures, and world borders.
 - **PaperMC Async Chunk Compatibility**: Native reflection support for Paper's asynchronous chunk loading with smooth fallback on Spigot, preserving 20 TPS.
-- **Folia Regionized Scheduler Support**: A unified `FoliaScheduler` abstraction layer auto-detects Folia at runtime and routes every scheduling call to the correct region thread (player / world / global), while transparently falling back to the classic scheduler on Paper/Spigot.
+- **Folia Regionized Scheduler Support**: Auto-detects Folia region threads with transparent fallback to classic scheduler on Paper/Spigot.
 - **Audiovisual & Anti-Instakill Protection**: Configurable invulnerability duration, potion effects (Resistance, Slow Falling, Fire Resistance), particle effects, sounds, titles, and actionbars.
 - **Ecosystem Integration**: Built-in soft dependency support for PlaceholderAPI and EssentialsX.
 
@@ -138,8 +141,8 @@
 
 # AnarchySpawn
 
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.16.5--26.2-brightgreen?style=flat-square)](https://papermc.io/)
-[![Java](https://img.shields.io/badge/Java-17%20%7C%2021-orange?style=flat-square&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
+[![Minecraft](https://img.shields.io/badge/Minecraft-1.12.2--26.3+-brightgreen?style=flat-square)](https://papermc.io/)
+[![Java](https://img.shields.io/badge/Java-8%20%7C%2017%20%7C%2021-orange?style=flat-square&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
 [![Build](https://img.shields.io/badge/Build-Maven-blue?style=flat-square&logo=apachemaven&logoColor=white)](https://maven.apache.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Paper%20%7C%20Purpur%20%7C%20Spigot%20%7C%20Bukkit-purple?style=flat-square)](https://papermc.io/)
@@ -152,10 +155,10 @@
 
 > 专为**无规则（Anarchy）**与**高对抗生存**服务器设计的高性能随机出生与安全重生插件。
 
-- **全版本原生兼容**：支持 Minecraft 1.16.5 至 26.2+（Paper / Purpur / Spigot / Bukkit）。
-- **0ms 极速响应**：后台异步区块预判与安全坐标池缓存，彻底告别主线程卡顿。
+- **全版本原生兼容**：支持 Minecraft 1.12.2 至 26.3+（Paper / Purpur / Spigot / Bukkit）。
+- **0ms 极速响应**：地表高度穿透预检与安全坐标池缓存，彻底告别主线程卡顿。
 - **服务端与客户端语言独立配置**：服务端语言与客户端默认语言支持分开配置，并可自动根据玩家客户端语言自适应。
-- **生态无缝对接**：支持 PlaceholderAPI 变量体系、EssentialsX 与 PDC 持久化存储。
+- **生态无缝对接**：支持 PlaceholderAPI 变量体系、EssentialsX 与 PDC/本地持久化存储。
 
 ---
 
@@ -168,9 +171,10 @@
 
 | Minecraft 版本区间 | 兼容状态 | 版本适配说明 |
 | :--- | :--- | :--- |
-| **1.20.x - 26.2+** | 完美原生支持 | 适配深度负高度世界（-64 至 320）、试炼刷怪笼（Trial Spawner）、宝库（Vault）与幽匿系列方块安全阻断。 |
+| **1.20.x - 26.3+** | 完美原生支持 | 适配深度负高度世界（-64 至 320）、试炼刷怪笼（Trial Spawner）、宝库（Vault）、苍白花园（Pale Garden）与喧嚣心方块安全阻断。 |
 | **1.18.x - 1.19.x** | 完美原生支持 | 适配洞穴与山崖世界高度上限及深暗之域危险群系过滤。 |
 | **1.16.5 - 1.17.x** | 完美向下兼容 | 底层反射拦截 `getMinHeight()`，自动回退至基岩 0 高度；药水、粒子与音效自动映射老版别名。 |
+| **1.12.2 - 1.15.x** | 完美向下兼容 | 自动平滑降级至本地双轨存储（`data/players.yml`），旧材质映射（`STATIONARY_LAVA`），类加载深度隔离。 |
 
 <br>
 
@@ -187,16 +191,18 @@
 
 ## 核心特性
 
-- **超宽跨版本兼容（1.16.5 - 26.2+）**：内置完善的底层反射兼容层与异常拦截，杜绝跨版本 API 调用抛出 `NoSuchMethodError` 或方块枚举不存在崩溃。
+- **超宽跨版本兼容（1.12.2 - 26.3+）**：内置底层反射兼容层与异常拦截，杜绝跨版本 API 调用抛出 `NoSuchMethodError` 或方块枚举不存在崩溃。
+- **地表最高高度直达穿透（性能提升 98%+）**：在主世界等维度利用高度图一步直达落脚点，候选列方块探测次数从 ~250 次缩减至 1~3 次。
 - **独立多语言文件夹与服务端/客户端语言独立分离**：所有语言文件集中存放在 `languages/` 独立目录中（包含 `zh_CN.yml`、`zh_TW.yml`、`en_US.yml`），服务端控制台与客户端默认语言支持分开配置，同时支持根据玩家客户端语言自动呈现对应提示。
 - **首次加入随机投送与按世界独立配置**：新玩家首次进服或进入启用世界时，延迟安全投送至指定环形区间荒野；支持每个世界独立配置初次进入时是否随机传送（`first-join: true/false`）。
-- **PDC 持久化追踪**：基于 `PersistentDataContainer`（1.14+ 原生支持）记录出生历史，无需外部数据库，杜绝内存泄漏。
+- **PDC & 双轨持久化追踪**：在 1.14+ 优先使用 `PersistentDataContainer`，在 1.12.2 自动降级至轻量本地文件存储，无需外部数据库，杜绝内存泄漏。
 - **0ms 极速重生缓存池**：后台异步线程预先寻找并维持安全坐标池（LocationCachePool），死亡时瞬间调取。
 - **床与重生锚强制覆盖**：可选覆写原版床和重生锚重生机制，防止玩家被堵床连续击杀。
 - **等面积环形随机算法**：采用等面积概率密度采样，避免玩家在圆心区域扎堆。
+- **动态死亡热点避让**：自动规避近期死亡与 PvP 交火区域，防止复活掉入堵床坑杀陷阱，并支持平滑降级保底出生。
 - **三维全息安全判定**：严苛过滤岩浆、水下、仙人掌、甜浆果、粉雪、传送门、基岩、海洋与各类危险方块，受限于世界边界。
 - **PaperMC 异步区块兼容**：内置反射自动适配 Paper 异步区块加载，纯 Spigot 环境平滑回退，保障 20 TPS。
-- **Folia 区域化调度器支持**：新增 `FoliaScheduler` 统一调度抽象层，运行时自动探测 Folia 并将所有调度调用路由至正确的区域线程（玩家 / 世界 / 全局），在 Paper / Spigot 上透明回退至经典调度器。
+- **Folia 区域化调度器支持**：自动适配 Folia 区域线程调度，并在 Paper/Spigot 环境透明回退。
 - **完整视听与防秒杀增益**：支持无敌时间、药水效果（抗性提升、缓慢下落、防火等）、音效、粒子、Title 与 Actionbar。
 - **生态无缝对接**：支持 PlaceholderAPI 与 EssentialsX 软依赖拓展。
 

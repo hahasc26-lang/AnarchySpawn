@@ -6,7 +6,7 @@
 
     <groupId>com.anarchy.spawn</groupId>
     <artifactId>AnarchySpawn</artifactId>
-    <version>1.0.3</version>
+    <version>1.1.0</version>
     <packaging>jar</packaging>
 
     <name>AnarchySpawn</name>
@@ -49,7 +49,7 @@
     </repositories>
 
     <dependencies>
-        <!-- Paper API 1.20.4 (Compatible with 1.16.5 ~ 1.21.x Bukkit/Spigot runtime) -->
+        <!-- Paper API 1.20.4 (Compatible baseline with 1.12.2 ~ 26.3+ Bukkit/Spigot runtime) -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
