@@ -27,4 +27,5 @@ Thumbs.db
 *.tmp
 *.bak
 package.json
+index.html
 

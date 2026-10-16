@@ -35,7 +35,6 @@ public class PlaceholderAPIHook extends PlaceholderExpansion {
     }
 
     @Override
-    @SuppressWarnings("deprecation")
     public @NotNull String getAuthor() {
         return plugin.getDescription().getAuthors().isEmpty() ? "haha" : String.join(", ", plugin.getDescription().getAuthors());
     }
