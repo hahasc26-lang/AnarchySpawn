@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 > 中文版请见 [CHANGELOG_Chinese.md](CHANGELOG_Chinese.md).
 
+## [1.1.0] - 2026-10-15
+
+### Added
+- **Full Compatibility for Minecraft 26.3+ (1.21.x)**:
+  - Extended `PaperCompatibility` reflection layer to dynamically resolve 26.3 / 1.21.x Bukkit & Paper API features, sound effects (`BLOCK_TRIAL_SPAWNER_SPAWN_MOB`, `ITEM_WIND_CHARGE_WIND_BURST`, `BLOCK_CREAKING_HEART_SPAWN`), and particle effects (`PALE_OAK_LEAVES`, `CREAKING_CRUMB`, `TRIAL_SPAWNER_DETECTION`, `WIND_CHARGE`).
+  - Added full safety inspection rules in `SafetyValidator` for 26.3 blocks (`CREAKING_HEART`, `EYE_BLOSSOM`, `PALE_HANGING_MOSS`, `HEAVY_CORE`, `RESIN_BLOCK`, `RESIN_CLUMP`) and biome support (`PALE_GARDEN`) with automatic fallback to safe alternatives on older servers (1.12.2 - 1.20.x).
+  - Updated metadata, documentation, and version matrix to reflect full `1.12.2 - 26.3+` runtime support across Paper, Purpur, Folia, and Spigot.
+- **Full Backward Compatibility Down to Minecraft 1.12.2**:
+  - Implemented dual-track persistence in `PDCUtils`: dynamically leverages native `PersistentDataContainer` (PDC) on 1.14+ while seamlessly degrading to thread-safe local file storage (`data/players.yml`) on 1.12.2 - 1.13.2.
+  - Added legacy material support (`STATIONARY_LAVA`, `STATIONARY_WATER`, `BURNING_FURNACE`, `BED_BLOCK`, etc.) and insulated 1.13+ class references (`BlockData`, `Waterlogged`, `Tag`) to prevent `NoClassDefFoundError` on legacy runtimes.
+  - Guarded against `Material.isBlock()` and `Material.isAir()` API absence on pre-1.13/pre-1.14 servers.
+- **Surface Direct Penetration & HighestBlockY Optimization**:
+  - Integrated `world.getHighestBlockYAt(x, z)` direct heightmap penetration in `SafeLocationFinder` for Overworld dimensions, reducing column block inspections from ~250 down to 1~3 iterations (a **98%+ speedup** in safe spawn searches).
+  - Implemented narrow search window (surface +6 down to -12) around surface terrain for immediate candidate evaluation, with graceful fallback scanning for caves and Nether bedrock ceilings.
+- Introduced `DeathHotspotManager` and `PlayerDeathListener` for dynamic death/combat hotspot tracking and avoidance.
+- Added `death-hotspots` configuration block in `config.yml` with customizable toggles (`enabled`), avoidance radius (`radius`), expiration duration (`ttl-seconds`), and max hotspots stored per world (`max-hotspots-per-world`).
+- Implemented two-phase search in `SafeLocationFinder`: primary phase filters candidate spawn points using death hotspot blacklists, while secondary fallback phase automatically ignores hotspot restrictions if primary search fails to find a valid location, ensuring players always spawn normally in the wilderness.
+- Added `PlayerQuitListener` and `TeleportService.cancelPlayerProtection()` to reset invulnerability and cancel protection tasks on player disconnect, eliminating combat-logging permanent god-mode exploits.
+
+### Fixed
+- **Folia Chunk Region Confinement Overload (Critical)**: Added `runForRegion(plugin, world, chunkX, chunkZ, task)` overload in `FoliaScheduler`. Fixed `SafeLocationFinder` and `PaperCompatibility.getChunkAtAsync` dispatching to default chunk `(0, 0)` instead of the target chunk coordinates `(targetX >> 4, targetZ >> 4)`, which would trigger Folia cross-region thread confinement violations when reading/loading blocks outside chunk (0,0).
+- **Fallback Respawn Interim Damage Protection**: Granted 60-tick damage immunity (`noDamageTicks`) in `PlayerRespawnListener` when falling back to the world spawn while background async search resolves, preventing instant deaths at hostile fallback points.
+- **PlaceholderAPI Hotspots Placeholder & Null Guards**: Added `%anarchyspawn_hotspots_<world>%` placeholder for active hotspot monitoring, and added null-safety checks in `PlaceholderAPIHook` to guard against disabled cache/hotspot services.
+- **PlayerDeathListener Lifecycle Guard**: Added defensive null checks for entity and `DeathHotspotManager` in `PlayerDeathListener` to ensure zero errors during reload or shutdown.
+- **Cache In-Flight Permit Leak Guard**: Wrapped column evaluation inside `FoliaScheduler.runForRegion` in `try-catch(Throwable)`, guaranteeing async CompletableFutures always resolve and never freeze cache pool refills.
+- **Folia scheduler reflection signature fix (critical)**: Corrected erroneous probe of non-existent `Bukkit.getRegionizedScheduler()` and `scheduler.player()`; now correctly resolves `Bukkit.getRegionScheduler()`, `Bukkit.getGlobalRegionScheduler()`, `Bukkit.getAsyncScheduler()`, and dynamically retrieves `player.getScheduler()` (EntityScheduler) per entity on Folia.
+- **Cache Pool Hotspot Bypass**: Fixed `LocationCachePool.poll()` failing to check whether pre-cached coordinates became active death hotspots after being cached.
+- **Respawn Effects Timing**: Switched `PlayerRespawnListener` to schedule post-respawn effects with a 1-tick delay (`runForPlayerLater(..., 1L)`), preventing potion effects, sounds, titles, and invulnerability from being skipped while the entity is still completing respawn.
+- **Empty Biome Blacklist Guard**: Guarded against blank or empty strings in `safety-filter.biome-blacklist` matching all biomes via `contains("")`.
+- **Annular Radius Math Safety**: Enforced `Math.min`/`Math.max` bounds in `SafeLocationFinder` to prevent `Math.sqrt` of negative numbers (`NaN`) when radius configs are inverted.
+- **Hotspot Cache Reset on Reload**: Added `deathHotspotManager.clearAllHotspots()` to `/as reload`.
+- **Dynamic Author in PlaceholderAPI**: Dynamically resolved plugin author from `plugin.yml` in `PlaceholderAPIHook`.
+- **Fire Coral & Mud Brick False Positives**: Fixed `DANGEROUS_SURROUNDING_MATERIALS` accidentally classifying safe `FIRE_CORAL` blocks as lethal fire, and refined `MUD` floor checking so that building blocks like `MUD_BRICKS` and `PACKED_MUD` are not falsely treated as unstable.
+- **Cross-World Join Race Condition**: Added world-consistency validation in `PlayerJoinListener` after the initial join delay to prevent cross-world conflicts with lobby/auth plugins.
+- **TeleportService Protection Task Field & Session Safety**: Resolved missing `activeProtectionTasks` compilation variable; introduced session-token tracking (`activeProtectionSessions`) ensuring safe protection cancellation and preventing stale callbacks on Folia.
+- **Folia Cross-Region Command Messaging**: Fixed `/as tp` and `/as test` violating Folia thread confinement by dispatching command feedback to the sender's own region thread instead of the target's thread.
+- **Folia Repeating Task Cancellation & Lifecycle Guard**: Added `runTimerGlobalTask` and reflective `cancelTask` to `FoliaScheduler` along with `isRunning` lifecycle checks in `LocationCachePool`, preventing recurring refill tasks from leaking on Folia during `/as reload`.
+- **Hotspot Fallback Attempt Optimization**: Short-circuited the secondary 35-attempt fallback pass if `getActiveHotspotsCount(world) == 0`, preventing redundant chunk operations when search failures are unrelated to hotspots.
+- **Clean Shutdown Memory Pruning**: Added `deathHotspotManager.clearAllHotspots()` to `onDisable()` to prevent lingering world references.
+- **Tab Completer World Name Casing**: Preserved configured world name casing in `/as` tab completions.
+
 ## [1.0.3] - 2026-10-04
 
 ### Added

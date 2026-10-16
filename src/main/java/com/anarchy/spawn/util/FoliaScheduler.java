@@ -1,122 +1,95 @@
 package com.anarchy.spawn.util;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.lang.reflect.Method;
+import java.util.function.Consumer;
 
 /**
  * Unified scheduler abstraction layer that transparently supports both the
  * classic Bukkit/Spigot/Paper scheduler and the Folia regionized scheduler.
  *
  * <p>
- * Folia enforces strict thread confinement: all {@link Player} operations must
- * run on the player's owning region thread, all chunk/block access must run on
- * the owning world's region thread, and pure background work must run on the
- * async scheduler. The classic {@code Bukkit.getScheduler()} API is unavailable
- * on Folia, so every scheduling call in this plugin is routed through this
- * class.
- * </p>
- *
- * <p>
- * Because the project compiles against {@code paper-api 1.20.4} (which predates
- * the regionized scheduler API), all Folia calls are performed through
- * reflection. On non-Folia environments every method delegates to the original
- * classic scheduler path, guaranteeing zero behavioral regression for existing
- * Paper/Spigot users.
- * </p>
- *
- * <p>
- * Folia's scheduler API is composed of three distinct schedulers, each with its
- * own method signatures:
- * </p>
- * <ul>
- * <li>{@code Bukkit.getRegionizedScheduler().player()} →
- * {@code EntityScheduler}: {@code run(Plugin, Runnable, Runnable)} and
- * {@code runDelayed(Plugin, Runnable, Runnable, long)}.</li>
- * <li>{@code Bukkit.getRegionizedScheduler().region()} →
- * {@code RegionScheduler}: {@code run(Plugin, World, int, int, Runnable)}
- * and {@code runDelayed(Plugin, World, int, int, Runnable, long)}.</li>
- * <li>{@code Bukkit.getRegionizedScheduler().global()} →
- * {@code GlobalRegionScheduler}: {@code run(Plugin, Runnable)} and
- * {@code runAtFixedRate(Plugin, Runnable, long, long)}.</li>
- * <li>{@code Bukkit.getAsyncScheduler()} → {@code AsyncScheduler}:
- * {@code runNow(Plugin, Consumer)}.</li>
- * </ul>
- *
- * <p>
- * Each reflective handle is resolved independently so that a single missing
- * method can never disable the whole Folia detection path.
+ * Folia enforces strict thread confinement:
+ * - All {@link Player} operations must run on the player's owning region thread via {@code player.getScheduler()} (EntityScheduler).
+ * - All chunk/block access must run on the owning world's region thread via {@code Bukkit.getRegionScheduler()}.
+ * - Global/server-wide tasks must run via {@code Bukkit.getGlobalRegionScheduler()}.
+ * - Pure background work must run via {@code Bukkit.getAsyncScheduler()}.
  * </p>
  */
 public final class FoliaScheduler {
 
     private static final boolean FOLIA;
 
-    // EntityScheduler (player-bound work).
-    private static Object entityScheduler;
-    private static Method entityRunMethod;
-    private static Method entityRunDelayedMethod;
-
-    // RegionScheduler (world/chunk-bound work).
+    // RegionScheduler (world/chunk-bound work)
     private static Object regionScheduler;
+    private static Method regionExecuteMethod;
     private static Method regionRunMethod;
 
-    // GlobalRegionScheduler (global repeating tasks).
+    // GlobalRegionScheduler (global repeating/one-shot tasks)
     private static Object globalScheduler;
-    private static Method globalRunMethod;
+    private static Method globalExecuteMethod;
     private static Method globalRunDelayedMethod;
     private static Method globalRunAtFixedRateMethod;
 
-    // AsyncScheduler (pure background work).
+    // AsyncScheduler (pure background work)
     private static Object asyncScheduler;
     private static Method asyncRunNowMethod;
 
     static {
         boolean folia = false;
         try {
-            Method getRegionized = Bukkit.class.getMethod("getRegionizedScheduler");
-            Object scheduler = getRegionized.invoke(null);
-            if (scheduler != null) {
-                Class<?> schedulerClass = scheduler.getClass();
+            // Standard Folia detection: check for Folia server class or getRegionScheduler on Bukkit
+            try {
+                Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+                folia = true;
+            } catch (ClassNotFoundException e) {
+                Method m = Bukkit.class.getMethod("getRegionScheduler");
+                folia = (m != null);
+            }
 
-                // --- EntityScheduler (player) ---
+            if (folia) {
+                // --- RegionScheduler ---
                 try {
-                    Method playerScheduler = schedulerClass.getMethod("player");
-                    entityScheduler = playerScheduler.invoke(scheduler);
-                    Class<?> entityClass = entityScheduler.getClass();
-                    entityRunMethod = entityClass.getMethod(
-                            "run", Plugin.class, Runnable.class, Runnable.class);
-                    entityRunDelayedMethod = entityClass.getMethod(
-                            "runDelayed", Plugin.class, Runnable.class, Runnable.class, long.class);
-                } catch (Throwable ignored) {
-                    entityScheduler = null;
-                }
-
-                // --- RegionScheduler (world) ---
-                try {
-                    Method regionSchedulerMethod = schedulerClass.getMethod("region");
-                    regionScheduler = regionSchedulerMethod.invoke(scheduler);
-                    Class<?> regionClass = regionScheduler.getClass();
-                    regionRunMethod = regionClass.getMethod(
-                            "run", Plugin.class, World.class, int.class, int.class, Runnable.class);
+                    Method getRegion = Bukkit.class.getMethod("getRegionScheduler");
+                    regionScheduler = getRegion.invoke(null);
+                    if (regionScheduler != null) {
+                        Class<?> rClass = regionScheduler.getClass();
+                        try {
+                            regionExecuteMethod = rClass.getMethod("execute", Plugin.class, World.class, int.class, int.class, Runnable.class);
+                        } catch (NoSuchMethodException ignored) {
+                            try {
+                                regionRunMethod = rClass.getMethod("run", Plugin.class, World.class, int.class, int.class, Consumer.class);
+                            } catch (NoSuchMethodException ignored2) {}
+                        }
+                    }
                 } catch (Throwable ignored) {
                     regionScheduler = null;
                 }
 
                 // --- GlobalRegionScheduler ---
                 try {
-                    Method globalSchedulerMethod = schedulerClass.getMethod("global");
-                    globalScheduler = globalSchedulerMethod.invoke(scheduler);
-                    Class<?> globalClass = globalScheduler.getClass();
-                    globalRunMethod = globalClass.getMethod("run", Plugin.class, Runnable.class);
-                    globalRunDelayedMethod = globalClass.getMethod(
-                            "runDelayed", Plugin.class, Runnable.class, long.class);
-                    globalRunAtFixedRateMethod = globalClass.getMethod(
-                            "runAtFixedRate", Plugin.class, Runnable.class, long.class, long.class);
+                    Method getGlobal = Bukkit.class.getMethod("getGlobalRegionScheduler");
+                    globalScheduler = getGlobal.invoke(null);
+                    if (globalScheduler != null) {
+                        Class<?> gClass = globalScheduler.getClass();
+                        try {
+                            globalExecuteMethod = gClass.getMethod("execute", Plugin.class, Runnable.class);
+                        } catch (NoSuchMethodException ignored) {}
+
+                        try {
+                            globalRunDelayedMethod = gClass.getMethod("runDelayed", Plugin.class, Consumer.class, long.class);
+                        } catch (NoSuchMethodException ignored) {}
+
+                        try {
+                            globalRunAtFixedRateMethod = gClass.getMethod("runAtFixedRate", Plugin.class, Consumer.class, long.class, long.class);
+                        } catch (NoSuchMethodException ignored) {}
+                    }
                 } catch (Throwable ignored) {
                     globalScheduler = null;
                 }
@@ -126,21 +99,17 @@ public final class FoliaScheduler {
                     Method getAsync = Bukkit.class.getMethod("getAsyncScheduler");
                     asyncScheduler = getAsync.invoke(null);
                     if (asyncScheduler != null) {
-                        Class<?> asyncClass = asyncScheduler.getClass();
-                        asyncRunNowMethod = asyncClass.getMethod(
-                                "runNow", Plugin.class, java.util.function.Consumer.class);
+                        Class<?> aClass = asyncScheduler.getClass();
+                        asyncRunNowMethod = aClass.getMethod("runNow", Plugin.class, Consumer.class);
                     }
                 } catch (Throwable ignored) {
                     asyncScheduler = null;
                 }
-
-                // Folia is considered available when at least the region scheduler
-                // resolved, which is the minimum required for chunk/block access.
-                folia = (regionScheduler != null);
             }
-        } catch (Throwable ignored) {
+        } catch (Throwable t) {
             folia = false;
         }
+
         FOLIA = folia;
     }
 
@@ -160,18 +129,29 @@ public final class FoliaScheduler {
      */
     public static BukkitTask runForPlayer(Plugin plugin, Player player, Runnable task) {
         if (FOLIA) {
-            if (entityScheduler != null && entityRunMethod != null && player != null) {
+            if (player != null && player.isOnline()) {
                 try {
-                    // EntityScheduler#run(Plugin, Runnable, Runnable retired)
-                    entityRunMethod.invoke(entityScheduler, plugin, task, null);
-                    return null;
+                    Method getScheduler = player.getClass().getMethod("getScheduler");
+                    Object entityScheduler = getScheduler.invoke(player);
+                    if (entityScheduler != null) {
+                        Class<?> eClass = entityScheduler.getClass();
+                        try {
+                            // Try execute(Plugin, Runnable, Runnable, long)
+                            Method exec = eClass.getMethod("execute", Plugin.class, Runnable.class, Runnable.class, long.class);
+                            exec.invoke(entityScheduler, plugin, task, null, 1L);
+                            return null;
+                        } catch (NoSuchMethodException e) {
+                            // Try run(Plugin, Consumer<ScheduledTask>, Runnable)
+                            Method runM = eClass.getMethod("run", Plugin.class, Consumer.class, Runnable.class);
+                            Consumer<Object> consumer = scheduledTask -> task.run();
+                            runM.invoke(entityScheduler, plugin, consumer, null);
+                            return null;
+                        }
+                    }
                 } catch (Throwable ignored) {
-                    // Fall through to the region scheduler below.
                 }
             }
-            // On Folia the classic scheduler is unavailable; degrade to the region
-            // scheduler (or the global scheduler) instead of throwing
-            // UnsupportedOperationException.
+            // Fallback to region or global
             return runForRegion(plugin, player != null ? player.getWorld() : null, task);
         }
         return Bukkit.getScheduler().runTask(plugin, task);
@@ -179,46 +159,60 @@ public final class FoliaScheduler {
 
     /**
      * Runs a task later on the owning region thread of the given player.
-     * Replaces {@code Bukkit.getScheduler().runTaskLater(...)} for player-bound
-     * work.
+     * Replaces {@code Bukkit.getScheduler().runTaskLater(...)} for player-bound work.
      */
     public static BukkitTask runForPlayerLater(Plugin plugin, Player player, Runnable task, long ticks) {
         if (FOLIA) {
-            if (entityScheduler != null && entityRunDelayedMethod != null && player != null) {
+            if (player != null && player.isOnline()) {
                 try {
-                    // EntityScheduler#runDelayed(Plugin, Runnable, Runnable retired, long delay)
-                    entityRunDelayedMethod.invoke(entityScheduler, plugin, task, null, ticks);
-                    return null;
+                    Method getScheduler = player.getClass().getMethod("getScheduler");
+                    Object entityScheduler = getScheduler.invoke(player);
+                    if (entityScheduler != null) {
+                        Class<?> eClass = entityScheduler.getClass();
+                        try {
+                            Method runDelayed = eClass.getMethod("runDelayed", Plugin.class, Consumer.class, Runnable.class, long.class);
+                            Consumer<Object> consumer = scheduledTask -> task.run();
+                            runDelayed.invoke(entityScheduler, plugin, consumer, null, Math.max(1L, ticks));
+                            return null;
+                        } catch (NoSuchMethodException ignored) {}
+                    }
                 } catch (Throwable ignored) {
-                    // Fall through to the global scheduler below.
                 }
             }
-            // On Folia the classic scheduler is unavailable; degrade to the global
-            // region scheduler instead of throwing UnsupportedOperationException.
+            // Fallback to global delayed
             return runTimerGlobal(plugin, task, ticks, -1L);
         }
         return Bukkit.getScheduler().runTaskLater(plugin, task, ticks);
     }
 
     /**
-     * Runs a task on the owning region thread of the given world.
-     * Replaces {@code Bukkit.getScheduler().runTask(...)} for chunk/block access.
+     * Runs a task on the owning region thread of the given world at chunk (0,0).
      */
     public static BukkitTask runForRegion(Plugin plugin, World world, Runnable task) {
+        return runForRegion(plugin, world, 0, 0, task);
+    }
+
+    /**
+     * Runs a task on the owning region thread of the specified chunk in the given world.
+     * Essential on Folia to prevent cross-region access violations when reading or modifying blocks.
+     */
+    public static BukkitTask runForRegion(Plugin plugin, World world, int chunkX, int chunkZ, Runnable task) {
         if (FOLIA) {
-            if (regionScheduler != null && regionRunMethod != null && world != null) {
+            if (regionScheduler != null && world != null) {
                 try {
-                    // RegionScheduler#run(Plugin, World, int chunkX, int chunkZ, Runnable)
-                    // Chunk coordinates (0, 0) are used because the task itself resolves the
-                    // exact block coordinates; the region owning that chunk is scheduled.
-                    regionRunMethod.invoke(regionScheduler, plugin, world, 0, 0, task);
-                    return null;
+                    if (regionExecuteMethod != null) {
+                        regionExecuteMethod.invoke(regionScheduler, plugin, world, chunkX, chunkZ, task);
+                        return null;
+                    }
+                    if (regionRunMethod != null) {
+                        Consumer<Object> consumer = scheduledTask -> task.run();
+                        regionRunMethod.invoke(regionScheduler, plugin, world, chunkX, chunkZ, consumer);
+                        return null;
+                    }
                 } catch (Throwable ignored) {
-                    // Fall through to the global scheduler below.
                 }
             }
-            // On Folia the classic scheduler is unavailable; degrade to the global
-            // region scheduler instead of throwing UnsupportedOperationException.
+            // Fallback to global
             return runTimerGlobal(plugin, task, 0L, -1L);
         }
         return Bukkit.getScheduler().runTask(plugin, task);
@@ -229,39 +223,57 @@ public final class FoliaScheduler {
      * Replaces {@code Bukkit.getScheduler().runTaskTimerAsynchronously(...)}.
      */
     public static BukkitTask runTimerGlobal(Plugin plugin, Runnable task, long delay, long period) {
+        Object handle = runTimerGlobalTask(plugin, task, delay, period);
+        return handle instanceof BukkitTask ? (BukkitTask) handle : null;
+    }
+
+    /**
+     * Schedules a repeating or delayed task and returns the underlying task handle
+     * (BukkitTask on Spigot/Paper, or ScheduledTask on Folia).
+     */
+    public static Object runTimerGlobalTask(Plugin plugin, Runnable task, long delay, long period) {
         if (FOLIA) {
             if (globalScheduler != null) {
                 try {
+                    Consumer<Object> consumer = scheduledTask -> task.run();
                     if (period > 0L) {
-                        // GlobalRegionScheduler#runAtFixedRate(Plugin, Runnable, long delay, long
-                        // period)
                         if (globalRunAtFixedRateMethod != null) {
-                            globalRunAtFixedRateMethod.invoke(globalScheduler, plugin, task, delay, period);
-                            return null;
+                            return globalRunAtFixedRateMethod.invoke(globalScheduler, plugin, consumer, Math.max(1L, delay), period);
                         }
                     } else {
-                        // One-shot global task (period <= 0): use runDelayed when available.
-                        if (globalRunDelayedMethod != null) {
-                            globalRunDelayedMethod.invoke(globalScheduler, plugin, task, Math.max(0L, delay));
-                            return null;
+                        if (delay > 0L && globalRunDelayedMethod != null) {
+                            return globalRunDelayedMethod.invoke(globalScheduler, plugin, consumer, delay);
                         }
-                        if (globalRunMethod != null) {
-                            globalRunMethod.invoke(globalScheduler, plugin, task);
+                        if (globalExecuteMethod != null) {
+                            globalExecuteMethod.invoke(globalScheduler, plugin, task);
                             return null;
                         }
                     }
                 } catch (Throwable ignored) {
-                    // Fall through to the async scheduler below.
                 }
             }
-            // On Folia the classic scheduler is unavailable; degrade to the async
-            // scheduler instead of throwing UnsupportedOperationException.
             return runAsync(plugin, task);
         }
         if (period > 0L) {
             return Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, task, delay, period);
         }
         return Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, task, Math.max(0L, delay));
+    }
+
+    /**
+     * Cancels any task handle, whether BukkitTask or Folia ScheduledTask.
+     */
+    public static void cancelTask(Object taskHandle) {
+        if (taskHandle == null) return;
+        try {
+            if (taskHandle instanceof BukkitTask) {
+                ((BukkitTask) taskHandle).cancel();
+            } else {
+                Method cancelMethod = taskHandle.getClass().getMethod("cancel");
+                cancelMethod.invoke(taskHandle);
+            }
+        } catch (Throwable ignored) {
+        }
     }
 
     /**
@@ -272,22 +284,17 @@ public final class FoliaScheduler {
         if (FOLIA) {
             if (asyncScheduler != null && asyncRunNowMethod != null) {
                 try {
-                    // AsyncScheduler#runNow(Plugin, Consumer<ScheduledTask>)
-                    java.util.function.Consumer<Object> consumer = scheduledTask -> task.run();
+                    Consumer<Object> consumer = scheduledTask -> task.run();
                     asyncRunNowMethod.invoke(asyncScheduler, plugin, consumer);
                     return null;
                 } catch (Throwable ignored) {
-                    // Fall through to the global scheduler below.
                 }
             }
-            // On Folia the classic scheduler is unavailable; degrade to the global
-            // region scheduler instead of throwing UnsupportedOperationException.
-            if (globalScheduler != null && globalRunMethod != null) {
+            if (globalScheduler != null && globalExecuteMethod != null) {
                 try {
-                    globalRunMethod.invoke(globalScheduler, plugin, task);
+                    globalExecuteMethod.invoke(globalScheduler, plugin, task);
                     return null;
                 } catch (Throwable ignored) {
-                    // Give up silently; the task cannot be scheduled on this runtime.
                 }
             }
             return null;

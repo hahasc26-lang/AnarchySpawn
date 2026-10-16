@@ -6,9 +6,12 @@ import com.anarchy.spawn.config.ConfigManager;
 import com.anarchy.spawn.config.MessageManager;
 import com.anarchy.spawn.hook.EssentialsHook;
 import com.anarchy.spawn.hook.PlaceholderAPIHook;
+import com.anarchy.spawn.listener.PlayerDeathListener;
 import com.anarchy.spawn.listener.PlayerJoinListener;
+import com.anarchy.spawn.listener.PlayerQuitListener;
 import com.anarchy.spawn.listener.PlayerRespawnListener;
 import com.anarchy.spawn.listener.PlayerWorldChangeListener;
+import com.anarchy.spawn.service.DeathHotspotManager;
 import com.anarchy.spawn.service.LocationCachePool;
 import com.anarchy.spawn.service.SafeLocationFinder;
 import com.anarchy.spawn.service.TeleportService;
@@ -38,6 +41,7 @@ public final class AnarchySpawn extends JavaPlugin {
     private SafeLocationFinder locationFinder;
     private LocationCachePool cachePool;
     private TeleportService teleportService;
+    private DeathHotspotManager deathHotspotManager;
 
     // Soft Hooks
     private boolean papiHooked = false;
@@ -69,6 +73,7 @@ public final class AnarchySpawn extends JavaPlugin {
         this.messageManager.loadMessages();
 
         // Initialize Services
+        this.deathHotspotManager = new DeathHotspotManager(this);
         this.locationFinder = new SafeLocationFinder(this);
         this.cachePool = new LocationCachePool(this);
         this.teleportService = new TeleportService(this);
@@ -103,6 +108,11 @@ public final class AnarchySpawn extends JavaPlugin {
             teleportService.cancelAllProtectionTasks();
         }
 
+        // Clear active death hotspots
+        if (deathHotspotManager != null) {
+            deathHotspotManager.clearAllHotspots();
+        }
+
         // Unregister PAPI hook if registered
         if (papiHooked) {
             PlaceholderAPIHook.unregisterHook();
@@ -117,6 +127,8 @@ public final class AnarchySpawn extends JavaPlugin {
         pm.registerEvents(new PlayerJoinListener(this), this);
         pm.registerEvents(new PlayerRespawnListener(this), this);
         pm.registerEvents(new PlayerWorldChangeListener(this), this);
+        pm.registerEvents(new PlayerDeathListener(this), this);
+        pm.registerEvents(new PlayerQuitListener(this), this);
     }
 
     private void registerCommands() {
@@ -161,6 +173,9 @@ public final class AnarchySpawn extends JavaPlugin {
         configManager.loadConfig();
         messageManager.loadMessages();
         cachePool.restartScheduler();
+        if (deathHotspotManager != null) {
+            deathHotspotManager.clearAllHotspots();
+        }
         getLogger().info("AnarchySpawn configuration and cache pool reloaded.");
     }
 
@@ -187,6 +202,10 @@ public final class AnarchySpawn extends JavaPlugin {
 
     public TeleportService getTeleportService() {
         return teleportService;
+    }
+
+    public DeathHotspotManager getDeathHotspotManager() {
+        return deathHotspotManager;
     }
 
     public NamespacedKey getFirstJoinKey() {

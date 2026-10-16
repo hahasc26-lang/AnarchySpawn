@@ -21,11 +21,13 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TeleportService {
 
     private final AnarchySpawn plugin;
     private final Map<UUID, BukkitTask> activeProtectionTasks = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> activeProtectionSessions = new ConcurrentHashMap<>();
 
     public TeleportService(AnarchySpawn plugin) {
         this.plugin = plugin;
@@ -67,7 +69,9 @@ public class TeleportService {
                 }
                 PaperCompatibility.teleportPlayerAsync(player, finalCachedLoc).thenAccept(success -> {
                     if (success) {
-                        applyEffectsAndFeedback(player, finalCachedLoc, settings, isFirstJoin);
+                        FoliaScheduler.runForPlayer(plugin, player, () -> {
+                            applyEffectsAndFeedback(player, finalCachedLoc, settings, isFirstJoin);
+                        });
                         // Trigger background refill since we consumed a cached point
                         FoliaScheduler.runAsync(plugin, () -> plugin.getCachePool().refillAllWorlds());
                     }
@@ -88,17 +92,21 @@ public class TeleportService {
                 Location targetLoc = isFallback ? settings.getFallbackLocation(finalWorld) : result.getLocation();
                 PaperCompatibility.teleportPlayerAsync(player, targetLoc).thenAccept(success -> {
                     if (success) {
-                        applyEffectsAndFeedback(player, targetLoc, settings, isFirstJoin);
-                        if (isFallback && plugin.getConfigManager().isClientFallbackWarningEnabled()
-                                && plugin.getMessageManager().hasMessage(player, "spawn.fallback-warning")) {
-                            Map<String, String> warnP = new HashMap<>();
-                            warnP.put("player", player.getName());
-                            warnP.put("world", targetLoc.getWorld().getName());
-                            warnP.put("x", String.valueOf(targetLoc.getBlockX()));
-                            warnP.put("y", String.valueOf(targetLoc.getBlockY()));
-                            warnP.put("z", String.valueOf(targetLoc.getBlockZ()));
-                            plugin.getMessageManager().sendMessage(player, "spawn.fallback-warning", warnP);
-                        }
+                        FoliaScheduler.runForPlayer(plugin, player, () -> {
+                            applyEffectsAndFeedback(player, targetLoc, settings, isFirstJoin);
+                            if (isFallback && plugin.getConfigManager().isClientFallbackWarningEnabled()
+                                    && plugin.getMessageManager().hasMessage(player, "spawn.fallback-warning")) {
+                                Map<String, String> warnP = new HashMap<>();
+                                warnP.put("player", player.getName());
+                                String wName = (targetLoc != null && targetLoc.getWorld() != null)
+                                        ? targetLoc.getWorld().getName() : settings.getWorldName();
+                                warnP.put("world", wName);
+                                warnP.put("x", targetLoc != null ? String.valueOf(targetLoc.getBlockX()) : "0");
+                                warnP.put("y", targetLoc != null ? String.valueOf(targetLoc.getBlockY()) : "0");
+                                warnP.put("z", targetLoc != null ? String.valueOf(targetLoc.getBlockZ()) : "0");
+                                plugin.getMessageManager().sendMessage(player, "spawn.fallback-warning", warnP);
+                            }
+                        });
                     }
                     future.complete(success);
                 });
@@ -132,6 +140,10 @@ public class TeleportService {
             }
             player.setNoDamageTicks(invulSecs * 20);
 
+            // Generate a unique session token for this protection window
+            long sessionId = System.currentTimeMillis();
+            activeProtectionSessions.put(player.getUniqueId(), sessionId);
+
             // Cancel any previous protection task
             BukkitTask previousTask = activeProtectionTasks.remove(player.getUniqueId());
             if (previousTask != null) {
@@ -139,6 +151,11 @@ public class TeleportService {
             }
 
             BukkitTask protectionTask = FoliaScheduler.runForPlayerLater(plugin, player, () -> {
+                Long currentSession = activeProtectionSessions.get(player.getUniqueId());
+                if (currentSession == null || currentSession != sessionId) {
+                    return; // Protection was cancelled or superseded by a newer spawn
+                }
+                activeProtectionSessions.remove(player.getUniqueId());
                 activeProtectionTasks.remove(player.getUniqueId());
                 if (player.isOnline()) {
                     try {
@@ -151,7 +168,9 @@ public class TeleportService {
                 }
             }, invulSecs * 20L);
 
-            activeProtectionTasks.put(player.getUniqueId(), protectionTask);
+            if (protectionTask != null) {
+                activeProtectionTasks.put(player.getUniqueId(), protectionTask);
+            }
         }
 
         if (protectionEnabled) {
@@ -159,47 +178,20 @@ public class TeleportService {
         }
 
         if (plugin.getConfigManager().isSoundEnabled()) {
-            try {
-                String soundName = plugin.getConfigManager().getSoundName().toUpperCase(Locale.ROOT);
-                Sound sound = null;
-                try {
-                    sound = Sound.valueOf(soundName);
-                } catch (IllegalArgumentException e) {
-                    if (soundName.contains("TELEPORT")) {
-                        try {
-                            sound = Sound.valueOf("ENTITY_ENDERMAN_TELEPORT");
-                        } catch (Exception ignored) {
-                        }
-                    }
-                }
-                if (sound != null) {
-                    player.playSound(location, sound, plugin.getConfigManager().getSoundVolume(),
-                            plugin.getConfigManager().getSoundPitch());
-                }
-            } catch (Exception ignored) {
-            }
+            PaperCompatibility.playSoundSafely(player, location,
+                    plugin.getConfigManager().getSoundName(),
+                    plugin.getConfigManager().getSoundVolume(),
+                    plugin.getConfigManager().getSoundPitch());
         }
 
         if (plugin.getConfigManager().isParticleEnabled()) {
-            try {
-                String particleName = plugin.getConfigManager().getParticleType().toUpperCase(Locale.ROOT);
-                Particle particle = null;
-                try {
-                    particle = Particle.valueOf(particleName);
-                } catch (IllegalArgumentException e) {
-                    try {
-                        particle = Particle.valueOf("PORTAL");
-                    } catch (Exception ignored) {
-                    }
-                }
-                if (particle != null) {
-                    player.getWorld().spawnParticle(particle, location.clone().add(0, 1, 0),
-                            plugin.getConfigManager().getParticleCount(),
-                            0.5, 0.5, 0.5,
-                            plugin.getConfigManager().getParticleSpeed());
-                }
-            } catch (Exception ignored) {
-            }
+            Location particleLoc = location.clone().add(0, 1, 0);
+            PaperCompatibility.spawnParticleSafely(player.getWorld(),
+                    plugin.getConfigManager().getParticleType(),
+                    particleLoc,
+                    plugin.getConfigManager().getParticleCount(),
+                    0.5, 0.5, 0.5,
+                    plugin.getConfigManager().getParticleSpeed());
         }
 
         Map<String, String> placeholders = new HashMap<>();
@@ -219,11 +211,7 @@ public class TeleportService {
         placeholders.put("yaw", String.valueOf((int) location.getYaw()));
         placeholders.put("pitch", String.valueOf((int) location.getPitch()));
 
-        String rawBiome = "UNKNOWN";
-        try {
-            rawBiome = location.getBlock().getBiome().name();
-        } catch (Throwable ignored) {
-        }
+        String rawBiome = PaperCompatibility.getBiomeNameAt(location);
         placeholders.put("biome_raw", rawBiome);
         placeholders.put("biome", plugin.getMessageManager().getLocalizedBiome(player, rawBiome));
         placeholders.put("direction", plugin.getMessageManager().getLocalizedDirection(player, location.getYaw()));
@@ -328,26 +316,34 @@ public class TeleportService {
         }
     }
 
-    private static final Map<String, String> EFFECT_ALIASES = new HashMap<>();
+    private static final Map<String, String[]> POTION_ALIASES = new HashMap<>();
     static {
-        EFFECT_ALIASES.put("RESISTANCE", "resistance");
-        EFFECT_ALIASES.put("DAMAGE_RESISTANCE", "resistance");
-        EFFECT_ALIASES.put("STRENGTH", "strength");
-        EFFECT_ALIASES.put("INCREASE_DAMAGE", "strength");
-        EFFECT_ALIASES.put("SLOWNESS", "slowness");
-        EFFECT_ALIASES.put("SLOW", "slowness");
-        EFFECT_ALIASES.put("HASTE", "haste");
-        EFFECT_ALIASES.put("FAST_DIGGING", "haste");
-        EFFECT_ALIASES.put("MINING_FATIGUE", "mining_fatigue");
-        EFFECT_ALIASES.put("SLOW_DIGGING", "mining_fatigue");
-        EFFECT_ALIASES.put("INSTANT_HEALTH", "instant_health");
-        EFFECT_ALIASES.put("HEAL", "instant_health");
-        EFFECT_ALIASES.put("INSTANT_DAMAGE", "instant_damage");
-        EFFECT_ALIASES.put("HARM", "instant_damage");
-        EFFECT_ALIASES.put("JUMP_BOOST", "jump_boost");
-        EFFECT_ALIASES.put("JUMP", "jump_boost");
-        EFFECT_ALIASES.put("NAUSEA", "nausea");
-        EFFECT_ALIASES.put("CONFUSION", "nausea");
+        addPotionAlias("RESISTANCE", "DAMAGE_RESISTANCE", "resistance");
+        addPotionAlias("STRENGTH", "INCREASE_DAMAGE", "strength");
+        addPotionAlias("SLOWNESS", "SLOW", "slowness");
+        addPotionAlias("HASTE", "FAST_DIGGING", "haste");
+        addPotionAlias("MINING_FATIGUE", "SLOW_DIGGING", "mining_fatigue");
+        addPotionAlias("INSTANT_HEALTH", "HEAL", "instant_health");
+        addPotionAlias("INSTANT_DAMAGE", "HARM", "instant_damage");
+        addPotionAlias("JUMP_BOOST", "JUMP", "jump_boost");
+        addPotionAlias("NAUSEA", "CONFUSION", "nausea");
+        addPotionAlias("REGENERATION", "REGENERATION", "regeneration");
+        addPotionAlias("SPEED", "SPEED", "speed");
+        addPotionAlias("FIRE_RESISTANCE", "FIRE_RESISTANCE", "fire_resistance");
+        addPotionAlias("WATER_BREATHING", "WATER_BREATHING", "water_breathing");
+        addPotionAlias("INVISIBILITY", "INVISIBILITY", "invisibility");
+        addPotionAlias("NIGHT_VISION", "NIGHT_VISION", "night_vision");
+        addPotionAlias("WEAKNESS", "WEAKNESS", "weakness");
+        addPotionAlias("POISON", "POISON", "poison");
+        addPotionAlias("WITHER", "WITHER", "wither");
+        addPotionAlias("ABSORPTION", "ABSORPTION", "absorption");
+        addPotionAlias("SATURATION", "SATURATION", "saturation");
+    }
+
+    private static void addPotionAlias(String modernEnum, String legacyEnum, String key) {
+        String[] arr = new String[]{modernEnum, legacyEnum, key};
+        POTION_ALIASES.put(modernEnum, arr);
+        POTION_ALIASES.put(legacyEnum, arr);
     }
 
     @SuppressWarnings("deprecation")
@@ -355,39 +351,64 @@ public class TeleportService {
         if (name == null || name.isEmpty())
             return null;
         String clean = name.trim().toUpperCase(Locale.ROOT).replace(" ", "_");
-        String standardKey = EFFECT_ALIASES.getOrDefault(clean, clean.toLowerCase(Locale.ROOT));
 
-        try {
-            PotionEffectType type = PotionEffectType.getByKey(NamespacedKey.minecraft(standardKey));
-            if (type != null)
-                return type;
-        } catch (Throwable ignored) {
+        // 1. Try getByName with alias options (1.12.2 legacy compatibility)
+        String[] aliases = POTION_ALIASES.get(clean);
+        if (aliases != null) {
+            for (String alias : aliases) {
+                try {
+                    PotionEffectType type = PotionEffectType.getByName(alias);
+                    if (type != null) return type;
+                } catch (Throwable ignored) {
+                }
+            }
         }
 
         try {
-            return PotionEffectType.getByName(clean);
+            PotionEffectType type = PotionEffectType.getByName(clean);
+            if (type != null) return type;
+        } catch (Throwable ignored) {
+        }
+
+        // 2. Try getByKey for 1.13+ NamespacedKey lookup
+        String standardKey = aliases != null && aliases.length >= 3 ? aliases[2] : clean.toLowerCase(Locale.ROOT);
+        try {
+            PotionEffectType type = PotionEffectType.getByKey(NamespacedKey.minecraft(standardKey));
+            if (type != null) return type;
         } catch (Throwable ignored) {
         }
 
         return null;
     }
 
+    public void cancelPlayerProtection(Player player) {
+        if (player == null) return;
+        activeProtectionSessions.remove(player.getUniqueId());
+        BukkitTask task = activeProtectionTasks.remove(player.getUniqueId());
+        if (task != null) {
+            task.cancel();
+        }
+        try {
+            player.setInvulnerable(false);
+        } catch (Throwable ignored) {
+        }
+    }
+
     public void cancelAllProtectionTasks() {
-        for (Map.Entry<UUID, BukkitTask> entry : activeProtectionTasks.entrySet()) {
-            if (entry.getValue() != null) {
-                entry.getValue().cancel();
-            }
-            Player p = Bukkit.getPlayer(entry.getKey());
-            if (p != null && p.isOnline()) {
-                // Player state must be mutated on the player's owning region thread (Folia).
-                FoliaScheduler.runForPlayer(plugin, p, () -> {
-                    try {
-                        p.setInvulnerable(false);
-                    } catch (Throwable ignored) {
-                    }
-                });
+        activeProtectionSessions.clear();
+        for (BukkitTask task : activeProtectionTasks.values()) {
+            if (task != null) {
+                task.cancel();
             }
         }
         activeProtectionTasks.clear();
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (p != null && p.isOnline()) {
+                try {
+                    p.setInvulnerable(false);
+                } catch (Throwable ignored) {
+                }
+            }
+        }
     }
 }

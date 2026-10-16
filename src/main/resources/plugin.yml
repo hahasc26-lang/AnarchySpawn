@@ -1,10 +1,10 @@
 name: AnarchySpawn
-version: '1.0.3'
+version: '1.1.0'
 main: com.anarchy.spawn.AnarchySpawn
-# Compiled against paper-api 1.20.4; runtime-compatible with 1.16.5 - 1.21.x
-# via a reflection-based compatibility layer (see PaperCompatibility / FoliaScheduler).
+# Runtime-compatible with Minecraft 1.12.2 - 26.3+ (Spigot / Paper / Purpur / Folia)
+# via reflection & dual-track compatibility layers (PDCUtils / FoliaScheduler / SafetyValidator).
 api-version: '1.16'
-author: AnarchyDev
+author: haha
 description: High-performance Safe Random Spawn and Respawn System for Anarchy Servers
 website: https://github.com/anarchy-mc/AnarchySpawn
 

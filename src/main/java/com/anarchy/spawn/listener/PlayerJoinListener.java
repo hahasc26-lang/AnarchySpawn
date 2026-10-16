@@ -60,7 +60,7 @@ public class PlayerJoinListener implements Listener {
 
         int delay = plugin.getConfigManager().getFirstJoinDelayTicks();
         FoliaScheduler.runForPlayerLater(plugin, player, () -> {
-            if (player.isOnline() && !player.isDead()) {
+            if (player.isOnline() && !player.isDead() && player.getWorld().getName().equalsIgnoreCase(worldName)) {
                 WorldSpawnSettings currentSettings = plugin.getConfigManager().getWorldSettings(worldName);
                 if (currentSettings == null || !currentSettings.isEnabled() || !currentSettings.isFirstJoinEnabled()) {
                     return;
