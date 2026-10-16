@@ -92,6 +92,7 @@ public class PaperCompatibility {
         PARTICLE_ALIASES.put(legacy, new String[]{modern, legacy});
     }
 
+    @SuppressWarnings("deprecation")
     public static Biome getBiomeAt(World world, int x, int y, int z) {
         if (world == null) return null;
 
@@ -111,12 +112,13 @@ public class PaperCompatibility {
             }
         }
 
-        // Direct fallback attempt
+        // 直接兜底：1.12.2-1.15 仅有 2D getBiome(x, z)，此处有意调用废弃方法以保持向下兼容
+        Biome fallbackBiome = null;
         try {
-            return world.getBiome(x, z);
+            fallbackBiome = world.getBiome(x, z);
         } catch (Throwable ignored) {
-            return null;
         }
+        return fallbackBiome;
     }
 
     public static String getBiomeNameAt(Location loc) {
