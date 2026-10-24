@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 > 中文版请见 [CHANGELOG_Chinese.md](CHANGELOG_Chinese.md).
 
+## [1.1.1] - 2026-10-24
+
+### Fixed
+- **Spawn/Respawn Radius Configuration Override Bug (Core)**:
+  - Fixed a hardcoded boundary clamp in `WorldSpawnSettings` where `maxRadius` was forced to `Math.max(minRadius + 100, ...)`. Previously, when configuring a small spawn radius (such as `max-radius: 10`, `20`, or `50`), the maximum outer radius was forcefully clamped to at least 100 blocks, causing custom small or compact spawn configurations to appear ineffective during searches and benchmark tests.
+  - Improved radius defensive parsing: fully supports custom non-negative radius ranges (including micro-radii and tight spawn rings); automatically swaps inverted configurations when `min-radius > max-radius`, and pairs with `SafeLocationFinder`'s built-in offset guarantee to prevent mathematical `NaN` or negative root errors.
+
 ## [1.1.0] - 2026-10-15
 
 ### Added

@@ -61,8 +61,15 @@ public class WorldSpawnSettings {
             }
         }
 
-        this.minRadius = Math.max(0, section.getDouble("min-radius", 1000.0));
-        this.maxRadius = Math.max(minRadius + 100, section.getDouble("max-radius", 25000.0));
+        double parsedMin = Math.max(0.0, section.getDouble("min-radius", 0.0));
+        double parsedMax = Math.max(0.0, section.getDouble("max-radius", 25000.0));
+        if (parsedMin > parsedMax) {
+            this.minRadius = parsedMax;
+            this.maxRadius = parsedMin;
+        } else {
+            this.minRadius = parsedMin;
+            this.maxRadius = parsedMax;
+        }
         this.minY = section.getInt("min-y", 60);
         this.maxY = Math.max(minY + 2, section.getInt("max-y", 310));
 

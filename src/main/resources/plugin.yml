@@ -1,5 +1,5 @@
 name: AnarchySpawn
-version: '1.1.0'
+version: '1.1.1'
 main: com.anarchy.spawn.AnarchySpawn
 # Runtime-compatible with Minecraft 1.12.2 - 26.3+ (Spigot / Paper / Purpur / Folia)
 # via reflection & dual-track compatibility layers (PDCUtils / FoliaScheduler / SafetyValidator).
