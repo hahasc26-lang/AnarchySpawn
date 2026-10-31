@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 > 中文版请见 [CHANGELOG_Chinese.md](CHANGELOG_Chinese.md).
 
+## [1.1.2] - 2026-10-31
+
+### Fixed
+
+- **Refactored Command Execution Layer**: Resolved Folia cross-region thread-safety issues, streamlined placeholder mappings to reduce GC pressure, and strengthened coordinate boundary validation alongside console fallback handling.
+
 ## [1.1.1] - 2026-10-31
 
 ### Fixed
