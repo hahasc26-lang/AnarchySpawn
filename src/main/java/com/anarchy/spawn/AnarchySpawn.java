@@ -15,8 +15,8 @@ import com.anarchy.spawn.service.DeathHotspotManager;
 import com.anarchy.spawn.service.LocationCachePool;
 import com.anarchy.spawn.service.SafeLocationFinder;
 import com.anarchy.spawn.service.TeleportService;
+import com.anarchy.spawn.util.FoliaScheduler;
 import org.bukkit.Bukkit;
-import org.bukkit.NamespacedKey;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -26,7 +26,7 @@ import java.util.logging.Level;
 
 /**
  * AnarchySpawn - High-Performance Safe Random Spawn &amp; Respawn System
- * Compatible with Spigot &amp; Paper 1.16.5 - 1.21.x
+ * Compatible with Spigot, Paper &amp; Folia 1.12.2 - 26.3+
  *
  * @author AnarchyDev
  */
@@ -46,9 +46,6 @@ public final class AnarchySpawn extends JavaPlugin {
     private boolean papiHooked = false;
     private boolean essentialsHooked = false;
 
-    // NamespacedKeys for PersistentDataContainer
-    private NamespacedKey firstJoinKey;
-
     @Override
     @SuppressWarnings("deprecation")
     public void onEnable() {
@@ -57,10 +54,9 @@ public final class AnarchySpawn extends JavaPlugin {
 
         getLogger().info("=========================================");
         getLogger().info("  AnarchySpawn v" + getDescription().getVersion() + " Starting...");
+        getLogger().info("  Scheduler Mode: "
+                + (FoliaScheduler.isFolia() ? "Folia (Regionized Scheduler)" : "Paper/Spigot (Classic Scheduler)"));
         getLogger().info("=========================================");
-
-        // Initialize Keys
-        this.firstJoinKey = new NamespacedKey(this, "has_random_spawned");
 
         // Initialize Configurations &amp; Managers
         this.configManager = new ConfigManager(this);
@@ -202,10 +198,6 @@ public final class AnarchySpawn extends JavaPlugin {
 
     public DeathHotspotManager getDeathHotspotManager() {
         return deathHotspotManager;
-    }
-
-    public NamespacedKey getFirstJoinKey() {
-        return firstJoinKey;
     }
 
     public boolean isPapiHooked() {

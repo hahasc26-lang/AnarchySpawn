@@ -278,9 +278,7 @@ public class MessageManager {
                 }
             }
         }
-        if (!msg.contains("{prefix}")) {
-            // No prefix placeholder specified, leave as is
-        } else {
+        if (msg.contains("{prefix}")) {
             msg = msg.replace("{prefix}", getPrefix(sender));
         }
         return ColorUtils.colorize(msg);
@@ -293,18 +291,14 @@ public class MessageManager {
             return;
 
         FileConfiguration cfg = resolveConfig(sender);
-        boolean isList = (cfg != null && cfg.isList(path)) || (defaultMessages != null && defaultMessages.isList(path));
+        boolean isList = (cfg != null && cfg.isList(path))
+                || (sender instanceof Player && clientDefaultMessages != null && clientDefaultMessages.isList(path))
+                || (defaultMessages != null && defaultMessages.isList(path));
 
         if (isList) {
             java.util.List<String> lines = getFormattedList(sender, path, placeholders);
             for (String line : lines) {
-                if (line.startsWith("[noprefix]")) {
-                    sender.sendMessage(line.substring(10));
-                } else if (line.startsWith("[prefix]")) {
-                    sender.sendMessage(getPrefix(sender) + line.substring(8));
-                } else {
-                    sender.sendMessage(line);
-                }
+                sendLineWithOptionalPrefixTag(sender, line, false);
             }
         } else {
             String raw = getRaw(sender, path);
@@ -313,18 +307,24 @@ public class MessageManager {
             if (raw.contains("\n")) {
                 java.util.List<String> lines = getFormattedList(sender, path, placeholders);
                 for (String line : lines) {
-                    sender.sendMessage(line);
+                    sendLineWithOptionalPrefixTag(sender, line, false);
                 }
             } else {
                 String formatted = formatString(sender, raw, placeholders);
-                if (formatted.startsWith("[noprefix]")) {
-                    sender.sendMessage(formatted.substring(10));
-                } else if (formatted.startsWith("[prefix]")) {
-                    sender.sendMessage(getPrefix(sender) + formatted.substring(8));
-                } else {
-                    sender.sendMessage(getPrefix(sender) + formatted);
-                }
+                sendLineWithOptionalPrefixTag(sender, formatted, true);
             }
+        }
+    }
+
+    private void sendLineWithOptionalPrefixTag(CommandSender sender, String line, boolean defaultWithPrefix) {
+        if (line.startsWith("[noprefix]")) {
+            sender.sendMessage(line.substring(10));
+        } else if (line.startsWith("[prefix]")) {
+            sender.sendMessage(getPrefix(sender) + line.substring(8));
+        } else if (defaultWithPrefix) {
+            sender.sendMessage(getPrefix(sender) + line);
+        } else {
+            sender.sendMessage(line);
         }
     }
 
@@ -360,6 +360,9 @@ public class MessageManager {
         FileConfiguration cfg = resolveConfig(sender);
         if (cfg != null && cfg.contains(path)) {
             return cfg.getString(path);
+        }
+        if (sender instanceof Player && clientDefaultMessages != null && clientDefaultMessages.contains(path)) {
+            return clientDefaultMessages.getString(path);
         }
         if (defaultMessages != null && defaultMessages.contains(path)) {
             return defaultMessages.getString(path);
@@ -410,6 +413,9 @@ public class MessageManager {
         FileConfiguration cfg = resolveConfig(sender);
         if (cfg != null && cfg.contains(path)) {
             return cfg.getString(path);
+        }
+        if (sender instanceof Player && clientDefaultMessages != null && clientDefaultMessages.contains(path)) {
+            return clientDefaultMessages.getString(path);
         }
         if (defaultMessages != null && defaultMessages.contains(path)) {
             return defaultMessages.getString(path);

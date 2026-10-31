@@ -14,8 +14,10 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,6 +51,7 @@ public class TeleportService {
         if (targetWorld == null) {
             targetWorld = player.getWorld();
         }
+        final org.bukkit.World finalWorld = targetWorld;
 
         Location cachedLoc = plugin.getCachePool().poll(settings.getWorldName());
         // A cached location is only usable when its world is currently loaded; a stale
@@ -71,21 +74,29 @@ public class TeleportService {
                         });
                         // Trigger background refill since we consumed a cached point
                         FoliaScheduler.runAsync(plugin, () -> plugin.getCachePool().refillAllWorlds());
+                        future.complete(true);
+                    } else {
+                        // Cached teleport failed, fall back to live search
+                        searchAndTeleportAsync(player, finalWorld, settings, isFirstJoin, future);
                     }
-                    future.complete(success);
                 });
             });
             return future;
         }
 
-        final org.bukkit.World finalWorld = targetWorld;
+        searchAndTeleportAsync(player, finalWorld, settings, isFirstJoin, future);
+        return future;
+    }
+
+    private void searchAndTeleportAsync(Player player, org.bukkit.World finalWorld, WorldSpawnSettings settings,
+            boolean isFirstJoin, CompletableFuture<Boolean> future) {
         plugin.getLocationFinder().findSafeLocationAsync(finalWorld, settings).thenAccept(result -> {
             FoliaScheduler.runForPlayer(plugin, player, () -> {
                 if (player == null || !player.isOnline() || player.isDead()) {
                     future.complete(false);
                     return;
                 }
-                boolean isFallback = !result.isSuccess();
+                boolean isFallback = !result.isSuccess() || result.getLocation() == null;
                 Location targetLoc = isFallback ? settings.getFallbackLocation(finalWorld) : result.getLocation();
                 PaperCompatibility.teleportPlayerAsync(player, targetLoc).thenAccept(success -> {
                     if (success) {
@@ -105,12 +116,11 @@ public class TeleportService {
                             }
                         });
                     }
-                    future.complete(success);
+                    // Complete with true only if a safe random point was found and teleport succeeded
+                    future.complete(!isFallback && success);
                 });
             });
         });
-
-        return future;
     }
 
     public void applyPostRespawnEffects(Player player, Location location, WorldSpawnSettings settings) {
@@ -380,18 +390,21 @@ public class TeleportService {
 
     public void cancelPlayerProtection(Player player) {
         if (player == null) return;
-        activeProtectionSessions.remove(player.getUniqueId());
+        Long removedSession = activeProtectionSessions.remove(player.getUniqueId());
         BukkitTask task = activeProtectionTasks.remove(player.getUniqueId());
         if (task != null) {
             task.cancel();
         }
-        try {
-            player.setInvulnerable(false);
-        } catch (Throwable ignored) {
+        if (removedSession != null) {
+            try {
+                player.setInvulnerable(false);
+            } catch (Throwable ignored) {
+            }
         }
     }
 
     public void cancelAllProtectionTasks() {
+        Set<UUID> protectedPlayers = new HashSet<>(activeProtectionSessions.keySet());
         activeProtectionSessions.clear();
         for (BukkitTask task : activeProtectionTasks.values()) {
             if (task != null) {
@@ -399,11 +412,21 @@ public class TeleportService {
             }
         }
         activeProtectionTasks.clear();
-        for (Player p : Bukkit.getOnlinePlayers()) {
+        for (UUID uuid : protectedPlayers) {
+            Player p = Bukkit.getPlayer(uuid);
             if (p != null && p.isOnline()) {
-                try {
-                    p.setInvulnerable(false);
-                } catch (Throwable ignored) {
+                if (plugin.isEnabled() && FoliaScheduler.isFolia()) {
+                    FoliaScheduler.runForPlayer(plugin, p, () -> {
+                        try {
+                            p.setInvulnerable(false);
+                        } catch (Throwable ignored) {
+                        }
+                    });
+                } else {
+                    try {
+                        p.setInvulnerable(false);
+                    } catch (Throwable ignored) {
+                    }
                 }
             }
         }

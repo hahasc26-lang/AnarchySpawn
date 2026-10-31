@@ -22,8 +22,8 @@ public class PDCUtils {
     private static final boolean HAS_PDC;
     private static final Map<UUID, Set<String>> LEGACY_CACHE = new ConcurrentHashMap<>();
     private static final Object FILE_LOCK = new Object();
-    private static File legacyFile = null;
-    private static YamlConfiguration legacyConfig = null;
+    private static volatile File legacyFile = null;
+    private static volatile YamlConfiguration legacyConfig = null;
 
     static {
         boolean pdc = false;
@@ -37,39 +37,49 @@ public class PDCUtils {
         HAS_PDC = pdc;
 
         if (!HAS_PDC) {
-            initLegacyStorage();
+            ensureLegacyInitialized();
         }
     }
 
-    private static void initLegacyStorage() {
-        try {
-            AnarchySpawn plugin = AnarchySpawn.getInstance();
-            File dataFolder = new File(plugin.getDataFolder(), "data");
-            if (!dataFolder.exists()) {
-                dataFolder.mkdirs();
+    private static void ensureLegacyInitialized() {
+        if (legacyFile != null && legacyConfig != null) {
+            return;
+        }
+        synchronized (FILE_LOCK) {
+            if (legacyFile != null && legacyConfig != null) {
+                return;
             }
-            legacyFile = new File(dataFolder, "players.yml");
-            if (!legacyFile.exists()) {
-                try {
-                    legacyFile.createNewFile();
-                } catch (IOException ignored) {
+            try {
+                AnarchySpawn plugin = AnarchySpawn.getInstance();
+                File dataFolder = new File(plugin.getDataFolder(), "data");
+                if (!dataFolder.exists()) {
+                    dataFolder.mkdirs();
                 }
-            }
-            legacyConfig = YamlConfiguration.loadConfiguration(legacyFile);
-
-            for (String key : legacyConfig.getKeys(false)) {
-                try {
-                    UUID uuid = UUID.fromString(key);
-                    List<String> worlds = legacyConfig.getStringList(key);
-                    Set<String> set = ConcurrentHashMap.newKeySet();
-                    for (String w : worlds) {
-                        set.add(w.toLowerCase(Locale.ROOT));
+                File file = new File(dataFolder, "players.yml");
+                if (!file.exists()) {
+                    try {
+                        file.createNewFile();
+                    } catch (IOException ignored) {
                     }
-                    LEGACY_CACHE.put(uuid, set);
-                } catch (IllegalArgumentException ignored) {
                 }
+                YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
+
+                for (String key : cfg.getKeys(false)) {
+                    try {
+                        UUID uuid = UUID.fromString(key);
+                        List<String> worlds = cfg.getStringList(key);
+                        Set<String> set = ConcurrentHashMap.newKeySet();
+                        for (String w : worlds) {
+                            set.add(w.toLowerCase(Locale.ROOT));
+                        }
+                        LEGACY_CACHE.put(uuid, set);
+                    } catch (IllegalArgumentException ignored) {
+                    }
+                }
+                legacyConfig = cfg;
+                legacyFile = file;
+            } catch (Throwable ignored) {
             }
-        } catch (Throwable ignored) {
         }
     }
 
@@ -78,6 +88,7 @@ public class PDCUtils {
         if (HAS_PDC) {
             return PdcNativeHandler.hasSpawned(player, worldName);
         } else {
+            ensureLegacyInitialized();
             Set<String> set = LEGACY_CACHE.get(player.getUniqueId());
             return set != null && set.contains(worldName.toLowerCase(Locale.ROOT));
         }
@@ -88,6 +99,7 @@ public class PDCUtils {
         if (HAS_PDC) {
             PdcNativeHandler.markSpawned(player, worldName);
         } else {
+            ensureLegacyInitialized();
             Set<String> set = LEGACY_CACHE.computeIfAbsent(player.getUniqueId(), k -> ConcurrentHashMap.newKeySet());
             boolean added = set.add(worldName.toLowerCase(Locale.ROOT));
             if (added) {
@@ -101,6 +113,7 @@ public class PDCUtils {
         if (HAS_PDC) {
             PdcNativeHandler.resetSpawn(player, worldName);
         } else {
+            ensureLegacyInitialized();
             Set<String> set = LEGACY_CACHE.get(player.getUniqueId());
             if (set != null && set.remove(worldName.toLowerCase(Locale.ROOT))) {
                 saveLegacyDataAsync(player.getUniqueId(), set);
@@ -109,6 +122,7 @@ public class PDCUtils {
     }
 
     private static void saveLegacyDataAsync(UUID uuid, Set<String> worlds) {
+        ensureLegacyInitialized();
         if (legacyFile == null || legacyConfig == null) return;
         FoliaScheduler.runAsync(AnarchySpawn.getInstance(), () -> {
             synchronized (FILE_LOCK) {

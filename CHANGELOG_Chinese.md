@@ -7,12 +7,34 @@
 
 > English version: [CHANGELOG.md](CHANGELOG.md).
 
-## [1.1.1] - 2026-10-24
+## [1.1.1] - 2026-10-31
 
 ### 修复
 - **世界随机出生/重生半径限制失效修复（核心）**：
   - 修复了 `WorldSpawnSettings` 中对最大半径 `maxRadius` 硬编码 `Math.max(minRadius + 100, ...)` 的截断缺陷。此前若服主将 `max-radius` 设置为较小数值（例如 `10`、`20`、`50`），系统均会被强制抬升至最低 100 格，导致配置的微型或紧凑出生圈完全失效并在 100 格内随机波动。
   - 优化半径合法性与极值防御逻辑：支持服主自定义任意非负半径（包括紧凑微半径及测试半径）；当配置出现 `min-radius > max-radius` 颠倒时自动进行防御性交换，配合 `SafeLocationFinder` 的环宽保底机制，杜绝坐标计算出现 `NaN` 或负数开方错误。
+- **跨世界首次进入随机传送被误拦截修复（`PlayerDataUtils` & `PlayerWorldChangeListener`）**：
+  - 新增 `PlayerDataUtils.hasExistingWorldPlayerData()`，在跨世界切换时仅检查目标世界自身的独立存档目录，修复了因全局 `player.hasPlayedBefore()` 或主世界存在 `playerdata` 文件导致开启 `ignore-existing-playerdata: true` 时跨世界首次随机出生永远被跳过的问题。
+  - 移除 `PlayerJoinListener` 与 `PlayerWorldChangeListener` 的 5-tick 延迟回调中重复执行的 `hasExistingPlayerData` 检查，防止玩家进服瞬间由服务端自动创建的统计/数据文件导致合法的首次随机出生被中断。
+  - 在 `PlayerJoinListener`、`PlayerRespawnListener` 与 `PlayerWorldChangeListener` 中补齐对 `anarchyspawn.use` 权限节点的校验。
+- **主世界地表高度直达穿透快路径与高树冠扫描修复（`SafeLocationFinder`）**：
+  - 修复了在 1.15+ 服务端上优先检测 `surfaceY - 1`（地表草方块下方的泥土）导致单次直达快路径在常规实心地表上 100% 失败并退化为循环扫描的问题；现优先校验 `surfaceY`，非固体时自动回退至 `surfaceY - 1`。
+  - 将主世界地表局部扫描下界扩展至 `surfaceY - 32` 以穿透高大丛林木/深色橡木树冠，并阻断主世界在山峰高于 `max-y` 时错误落入全列垂直洞穴扫描的分支，杜绝玩家出生在封闭地下深穴。
+- **出生保护清理范围精准化与 Folia 线程安全修复（`TeleportService`）**：
+  - 修复了 `cancelAllProtectionTasks()` 在重载或卸载插件时遍历全服所有在线玩家并强制执行 `setInvulnerable(false)`，导致误剥夺管理员或其他插件开启的无敌（God Mode）状态的问题；现仅针对处于 `activeProtectionSessions` 出生保护期内的玩家恢复状态，并在 Folia 运行期通过 `FoliaScheduler.runForPlayer` 安全派发。
+- **Folia 调度器反射强封装访问修复（`FoliaScheduler`）**：
+  - 改为优先从 Paper/Folia 公开调度器接口（`RegionScheduler`、`GlobalRegionScheduler`、`AsyncScheduler`、`EntityScheduler`、`ScheduledTask`）解析方法并辅以 `setAccessible(true)`，消除在 Java 17/21 强封装下直接对包级私有实现类调用 `invoke` 抛出的 `IllegalAccessException`。
+- **预热缓存池链式补满、地形二次复核与并发守卫修正（`LocationCachePool`）**：
+  - 在 `refillWorld()` 异步回调中增加链式续补逻辑，当缓存池未达到 `target-size` 时自动发起下一批补充，解决启动预热过慢以及执行 `/as cache` 每次仅补充 3 个点位的问题。
+  - 在 `LocationCachePool.poll()` 出队时新增 `isLocationStillSafeIfLoaded()` 二次校验，若缓存点所在区块处于已加载状态且期间被玩家破坏或放置岩浆陷阱，将自动丢弃并抽取下一个安全点。
+  - 修正非 Folia 环境下 `isRefilling` 守卫在主线程任务执行前被提前释放的时序问题。
+- **备用点降级状态反馈与基准测试次数统计修正**：
+  - 修复了 `TeleportService` 在搜索失败降级传送至 `fallback-location` 时仍向 `CompletableFuture` 返回 `true` 的问题，确保 `/as tp` 在降级至备用点时准确提示 `command.tp-failed`；当缓存点传送失败时自动回退至实时搜索。
+  - 修正 `SafeLocationFinder` 在异步搜索耗尽时尝试次数多计 1 次（显示 `maxAttempts + 1`）以及两阶段热点降级搜索时未累加第一阶段尝试次数的问题。
+- **安全验证器幽匿方块补全、配置默认值对齐与指令细节优化**：
+  - 在 `SafetyValidator` 脚底危险方块列表中补齐 `SCULK_SHRIEKER`（幽匿尖啸体）与 `SCULK_SENSOR`（幽匿感测体），并清理冗余的 `MUD` 死代码分支。
+  - 将 `ConfigManager` 中 `override-bed`、`override-anchor`、`death-hotspots.radius` 等回退默认值与 `config.yml` 对齐，移除 `death-hotspots.radius` 硬编码的 `10.0` 下限截断（支持配置小半径热点），并向下兼容 1.0.3 的 `safety-filter.enable-safe-spawn-check` 配置键。
+  - 在 `AnarchySpawnCommand` 中补齐文档声明的子命令别名（`status`、`benchmark`、`refill`）及 `anarchyspawn.admin` 权限兜底，在 `PDCUtils` 中改用线程安全的延迟初始化，完善 `MessageManager` 对 `\n` 多行文本的 `[noprefix]`/`[prefix]` 解析与语言回退链，并修正 `en_US.yml` 中 `Windswept Hills` 的拼写错误。
 
 ## [1.1.0] - 2026-10-15
 

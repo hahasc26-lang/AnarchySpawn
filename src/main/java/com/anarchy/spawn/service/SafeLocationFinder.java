@@ -61,7 +61,7 @@ public class SafeLocationFinder {
         int maxAttempts = plugin.getConfigManager().getMaxSearchAttempts();
 
         // Phase 1: Search with hotspot avoidance check enabled
-        searchNextAttemptAsync(world, settings, 1, maxAttempts, true, startTime, future);
+        searchNextAttemptAsync(world, settings, 1, 0, maxAttempts, true, startTime, future);
         return future;
     }
 
@@ -73,14 +73,15 @@ public class SafeLocationFinder {
         }
     }
 
-    private void searchNextAttemptAsync(World world, WorldSpawnSettings settings, int currentAttempt, int maxAttempts,
-            boolean checkHotspots, long startTime, CompletableFuture<SearchResult> future) {
+    private void searchNextAttemptAsync(World world, WorldSpawnSettings settings, int currentAttempt, int attemptOffset,
+            int maxAttempts, boolean checkHotspots, long startTime, CompletableFuture<SearchResult> future) {
         if (!plugin.isEnabled()) {
-            future.complete(new SearchResult(null, currentAttempt, 0, false));
+            future.complete(new SearchResult(null, attemptOffset + Math.max(0, currentAttempt - 1), 0, false));
             return;
         }
 
         if (currentAttempt > maxAttempts) {
+            int executedAttempts = attemptOffset + maxAttempts;
             // If primary search with hotspot avoidance failed and there were active hotspots, retry ignoring hotspots
             boolean hasActiveHotspots = plugin.getDeathHotspotManager() != null
                     && plugin.getDeathHotspotManager().getActiveHotspotsCount(world.getName()) > 0;
@@ -90,14 +91,14 @@ public class SafeLocationFinder {
                         "[SafeLocationFinder] Hotspot-filtered search in '%s' exceeded max attempts (%d). Retrying normal spawn search ignoring hotspots...",
                         world.getName(), maxAttempts));
                 }
-                searchNextAttemptAsync(world, settings, 1, maxAttempts, false, startTime, future);
+                searchNextAttemptAsync(world, settings, 1, executedAttempts, maxAttempts, false, startTime, future);
                 return;
             }
 
             // Both passes exhausted; return emergency fallback location
             Location fallback = settings.getFallbackLocation(world);
             long duration = System.currentTimeMillis() - startTime;
-            future.complete(new SearchResult(fallback, currentAttempt, duration, false));
+            future.complete(new SearchResult(fallback, executedAttempts, duration, false));
             return;
         }
 
@@ -112,40 +113,40 @@ public class SafeLocationFinder {
 
         PaperCompatibility.getChunkAtAsync(world, targetX >> 4, targetZ >> 4).thenAccept(chunk -> {
             if (!plugin.isEnabled()) {
-                future.complete(new SearchResult(null, currentAttempt, 0, false));
+                future.complete(new SearchResult(null, attemptOffset + currentAttempt, 0, false));
                 return;
             }
             FoliaScheduler.runForRegion(plugin, world, targetX >> 4, targetZ >> 4, () -> {
                 try {
                     if (!plugin.isEnabled()) {
-                        future.complete(new SearchResult(null, currentAttempt, 0, false));
+                        future.complete(new SearchResult(null, attemptOffset + currentAttempt, 0, false));
                         return;
                     }
                     Location safeLoc = evaluateColumn(world, targetX, targetZ, settings, checkHotspots);
                     if (safeLoc != null) {
                         long duration = System.currentTimeMillis() - startTime;
                         String biomeName = getBiomeName(safeLoc);
-                        future.complete(new SearchResult(safeLoc, currentAttempt, duration, true, biomeName));
+                        future.complete(new SearchResult(safeLoc, attemptOffset + currentAttempt, duration, true, biomeName));
                     } else {
                         if (plugin.isEnabled()) {
-                            searchNextAttemptAsync(world, settings, currentAttempt + 1, maxAttempts, checkHotspots, startTime, future);
+                            searchNextAttemptAsync(world, settings, currentAttempt + 1, attemptOffset, maxAttempts, checkHotspots, startTime, future);
                         } else {
-                            future.complete(new SearchResult(null, currentAttempt, 0, false));
+                            future.complete(new SearchResult(null, attemptOffset + currentAttempt, 0, false));
                         }
                     }
                 } catch (Throwable t) {
                     if (plugin.isEnabled()) {
-                        searchNextAttemptAsync(world, settings, currentAttempt + 1, maxAttempts, checkHotspots, startTime, future);
+                        searchNextAttemptAsync(world, settings, currentAttempt + 1, attemptOffset, maxAttempts, checkHotspots, startTime, future);
                     } else {
-                        future.complete(new SearchResult(null, currentAttempt, 0, false));
+                        future.complete(new SearchResult(null, attemptOffset + currentAttempt, 0, false));
                     }
                 }
             });
         }).exceptionally(ex -> {
             if (plugin.isEnabled()) {
-                searchNextAttemptAsync(world, settings, currentAttempt + 1, maxAttempts, checkHotspots, startTime, future);
+                searchNextAttemptAsync(world, settings, currentAttempt + 1, attemptOffset, maxAttempts, checkHotspots, startTime, future);
             } else {
-                future.complete(new SearchResult(null, currentAttempt, 0, false));
+                future.complete(new SearchResult(null, attemptOffset + currentAttempt, 0, false));
             }
             return null;
         });
@@ -157,6 +158,7 @@ public class SafeLocationFinder {
     public SearchResult findSafeLocationSync(World world, WorldSpawnSettings settings) {
         long startTime = System.currentTimeMillis();
         int maxAttempts = plugin.getConfigManager().getMaxSearchAttempts();
+        int totalAttempts = maxAttempts;
 
         // Phase 1: Try finding a location with death hotspot avoidance
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -183,10 +185,11 @@ public class SafeLocationFinder {
                     return new SearchResult(safeLoc, maxAttempts + attempt, duration, true, getBiomeName(safeLoc));
                 }
             }
+            totalAttempts = maxAttempts * 2;
         }
 
         long duration = System.currentTimeMillis() - startTime;
-        return new SearchResult(settings.getFallbackLocation(world), maxAttempts, duration, false, "UNKNOWN");
+        return new SearchResult(settings.getFallbackLocation(world), totalAttempts, duration, false, "UNKNOWN");
     }
 
     private Location sampleAndEvaluateSync(World world, WorldSpawnSettings settings, boolean checkHotspots) {
@@ -260,18 +263,20 @@ public class SafeLocationFinder {
             try {
                 int surfaceY = world.getHighestBlockYAt(x, z);
                 if (surfaceY >= minY && surfaceY <= maxY + 1) {
-                    Block ground = world.getBlockAt(x, surfaceY > worldMin ? surfaceY - 1 : surfaceY, z);
-                    if (!ground.getType().isSolid()) {
-                        ground = world.getBlockAt(x, surfaceY, z);
+                    // On 1.15+, getHighestBlockYAt returns the highest non-air block itself (e.g. grass_block).
+                    // On 1.12.2-1.14.4 (or when tall grass/snow sits on top), surfaceY may be passable, so fallback to surfaceY - 1.
+                    Block ground = world.getBlockAt(x, Math.min(maxY, surfaceY), z);
+                    if (!ground.getType().isSolid() && surfaceY > worldMin) {
+                        ground = world.getBlockAt(x, surfaceY - 1, z);
                     }
                     if (isSafeSpawnPoint(world, ground, isOverworld)) {
                         float yaw = (float) (random.nextFloat() * 360.0f - 180.0f);
                         return new Location(world, x + 0.5, ground.getY() + 1.0, z + 0.5, yaw, 0.0f);
                     }
 
-                    // Targeted narrow scan within surface neighborhood (surface +6 down to -12 blocks)
+                    // Targeted scan within surface neighborhood (surface +6 down to -32 blocks to penetrate tall jungle/oak canopies)
                     int scanTop = Math.min(maxY, surfaceY + 6);
-                    int scanBottom = Math.max(minY, surfaceY - 12);
+                    int scanBottom = Math.max(minY, surfaceY - 32);
                     for (int y = scanTop; y >= scanBottom; y--) {
                         Block candidate = world.getBlockAt(x, y, z);
                         if (isSafeSpawnPoint(world, candidate, isOverworld)) {
@@ -279,8 +284,9 @@ public class SafeLocationFinder {
                             return new Location(world, x + 0.5, y + 1.0, z + 0.5, yaw, 0.0f);
                         }
                     }
-                    return null;
                 }
+                // In Overworld, do not fall through to subterranean cave scanning if surface exceeded maxY or was unsafe
+                return null;
             } catch (Throwable ignored) {
             }
         }
@@ -297,21 +303,43 @@ public class SafeLocationFinder {
         return null;
     }
 
-    private boolean isSafeSpawnPoint(World world, Block ground, boolean isOverworld) {
+    /**
+     * Checks whether the given ground block and the 2-block standing space above it
+     * still constitute a valid, safe spawn point.
+     */
+    public boolean isSafeSpawnPoint(World world, Block ground, boolean isOverworld) {
         if (ground == null) return false;
         Block feet = ground.getRelative(BlockFace.UP);
         Block head = feet.getRelative(BlockFace.UP);
 
         Biome groundBiome = PaperCompatibility.getBiomeAt(world, ground.getX(), ground.getY(), ground.getZ());
 
-        if (SafetyValidator.isSafeFloor(plugin, ground)
+        return SafetyValidator.isSafeFloor(plugin, ground)
                 && SafetyValidator.isPassable(feet)
                 && SafetyValidator.isPassable(head)
                 && SafetyValidator.isSafeBiome(plugin, groundBiome)
-                && SafetyValidator.isSafeSurroundings(feet)) {
+                && SafetyValidator.isSafeSurroundings(feet);
+    }
+
+    /**
+     * Re-validates a pre-cached spawn location if its chunk is currently loaded in memory.
+     */
+    public boolean isLocationStillSafeIfLoaded(Location loc) {
+        if (loc == null || loc.getWorld() == null) return false;
+        World world = loc.getWorld();
+        int chunkX = loc.getBlockX() >> 4;
+        int chunkZ = loc.getBlockZ() >> 4;
+        try {
+            if (!world.isChunkLoaded(chunkX, chunkZ)) {
+                return true;
+            }
+            Block ground = world.getBlockAt(loc.getBlockX(), loc.getBlockY() - 1, loc.getBlockZ());
+            boolean isOverworld = world.getEnvironment() == World.Environment.NORMAL;
+            return isSafeSpawnPoint(world, ground, isOverworld);
+        } catch (Throwable ignored) {
+            // On Folia, if called off-region thread, defer validation to the teleport thread
             return true;
         }
-        return false;
     }
 
     public static class SearchResult {

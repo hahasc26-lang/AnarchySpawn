@@ -68,6 +68,29 @@ public class PlayerDataUtils {
         return false;
     }
 
+    /**
+     * 检查玩家在切换到指定世界时，该目标世界自身是否已存在独立的历史玩家数据文件。
+     * 避免因主世界已生成全局 playerdata 或 hasPlayedBefore() 为 true 而误拦截跨世界首次随机传送。
+     *
+     * @param player 目标玩家
+     * @param world  切换进入的目标世界
+     * @return 如果目标世界自身已存在该玩家的独立存档记录则返回 true
+     */
+    public static boolean hasExistingWorldPlayerData(Player player, World world) {
+        if (player == null || world == null) return false;
+
+        // 如果目标世界就是服务器默认主世界，则仅当玩家此前已在服务器游玩过时视为已有存档
+        if (!Bukkit.getWorlds().isEmpty() && world.equals(Bukkit.getWorlds().get(0))) {
+            return player.hasPlayedBefore();
+        }
+
+        // 对于非默认主世界（如下界、末地或多世界插件创建的独立世界），仅检查该世界独立目录下的 playerdata
+        String uuidStr = player.getUniqueId().toString();
+        File worldDir = world.getWorldFolder();
+        return checkFileExists(new File(worldDir, "playerdata/" + uuidStr + ".dat"))
+                || checkFileExists(new File(worldDir, "stats/" + uuidStr + ".json"));
+    }
+
     private static boolean checkFileExists(File file) {
         return file != null && file.exists() && file.isFile() && file.length() > 0;
     }

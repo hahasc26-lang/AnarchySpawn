@@ -51,16 +51,21 @@ public class PlayerWorldChangeListener implements Listener {
             return;
         }
 
+        if (!player.hasPermission("anarchyspawn.use")) {
+            return;
+        }
+
         if (PDCUtils.hasSpawnedInWorld(player, worldName)) {
             return;
         }
 
-        // 如果配置了检测到玩家文件则不实行随机传送
-        if (settings.isIgnoreExistingPlayerData() && PlayerDataUtils.hasExistingPlayerData(player, player.getWorld())) {
+        // 如果配置了检测到该目标世界存在玩家独立存档则不实行随机传送
+        if (settings.isIgnoreExistingPlayerData()
+                && PlayerDataUtils.hasExistingWorldPlayerData(player, player.getWorld())) {
             PDCUtils.markSpawnedInWorld(player, worldName);
             if (plugin.getConfigManager().isDebug()) {
                 plugin.getLogger().info("Player " + player.getName()
-                        + " has existing playerdata file; skipping world-change first-join random spawn for world "
+                        + " has existing world playerdata file; skipping world-change first-join random spawn for world "
                         + worldName);
             }
             return;
@@ -78,10 +83,6 @@ public class PlayerWorldChangeListener implements Listener {
                     WorldSpawnSettings currentSettings = plugin.getConfigManager().getWorldSettings(worldName);
                     if (currentSettings == null || !currentSettings.isEnabled()
                             || !currentSettings.isFirstJoinEnabled()) {
-                        return;
-                    }
-                    if (currentSettings.isIgnoreExistingPlayerData()
-                            && PlayerDataUtils.hasExistingPlayerData(player, player.getWorld())) {
                         return;
                     }
                     if (!PDCUtils.hasSpawnedInWorld(player, worldName)) {

@@ -95,13 +95,13 @@ public class ConfigManager {
         // General
         this.debug = config.getBoolean("general.debug", false);
         this.asyncSearch = config.getBoolean("general.async-search", true);
-        this.maxSearchAttempts = Math.max(5, config.getInt("general.max-search-attempts", 35));
+        this.maxSearchAttempts = Math.max(5, config.getInt("general.max-search-attempts", 50));
 
         // Language
         this.serverLanguage = config.getString("language.server-language",
-                config.getString("language.default-language", "zh_CN"));
+                config.getString("language.default-language", "en_US"));
         this.clientDefaultLanguage = config.getString("language.client-default-language",
-                config.getString("language.default-language", "zh_CN"));
+                config.getString("language.default-language", "en_US"));
         this.autoLanguage = config.getBoolean("language.auto-language", true);
 
         // First Join
@@ -111,19 +111,19 @@ public class ConfigManager {
 
         // Respawn
         this.respawnEnabled = config.getBoolean("respawn.enabled", true);
-        this.overrideBed = config.getBoolean("respawn.override-bed", true);
-        this.overrideAnchor = config.getBoolean("respawn.override-anchor", true);
+        this.overrideBed = config.getBoolean("respawn.override-bed", false);
+        this.overrideAnchor = config.getBoolean("respawn.override-anchor", false);
         this.respectBypassPermission = config.getBoolean("respawn.respect-bypass-permission", true);
 
         // Cache Pool
         this.cacheEnabled = config.getBoolean("cache-pool.enabled", true);
-        this.cacheTargetSize = Math.max(5, config.getInt("cache-pool.target-size", 25));
+        this.cacheTargetSize = Math.max(1, config.getInt("cache-pool.target-size", 25));
         this.cacheRefillIntervalSeconds = Math.max(3, config.getInt("cache-pool.refill-interval-seconds", 10));
         this.maxCacheAgeSeconds = Math.max(60, config.getInt("cache-pool.max-cache-age-seconds", 1800));
 
         // Death Hotspots Avoidance
         this.deathHotspotEnabled = config.getBoolean("death-hotspots.enabled", true);
-        this.deathHotspotRadius = Math.max(10.0, config.getDouble("death-hotspots.radius", 250.0));
+        this.deathHotspotRadius = Math.max(0.0, config.getDouble("death-hotspots.radius", 10.0));
         this.deathHotspotTtlSeconds = Math.max(10, config.getInt("death-hotspots.ttl-seconds", 300));
         this.deathHotspotMaxPerWorld = Math.max(5, config.getInt("death-hotspots.max-hotspots-per-world", 50));
 
@@ -154,8 +154,9 @@ public class ConfigManager {
         this.serverLogFirstJoin = config.getBoolean("notifications.server.console-log-first-join", true);
         this.serverLogRespawn = config.getBoolean("notifications.server.console-log-respawn", true);
 
-        // Safety Filter Materials
-        this.enableSafeSpawnCheck = config.getBoolean("safety-filter.enforce-safe-spawn", true);
+        // Safety Filter Materials (supports both 'enforce-safe-spawn' and legacy 'enable-safe-spawn-check')
+        this.enableSafeSpawnCheck = config.getBoolean("safety-filter.enforce-safe-spawn",
+                config.getBoolean("safety-filter.enable-safe-spawn-check", true));
 
         this.unsafeFloorMaterials.clear();
         List<String> rawMaterials = config.getStringList("safety-filter.unsafe-floor-materials");

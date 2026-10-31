@@ -41,9 +41,10 @@ public final class SafetyValidator {
     static {
         // 脚底不可落脚的危险关键字列表（仅包含对玩家生命与环境有直接破坏/剧烈减速陷阱的方块）
         List<String> floorKeywords = List.of(
-            // 致命伤害与危险（仙人掌、熔岩块、营火、凋零玫瑰、滴水石、爆炸物、锚、试炼宝库、苍白花园喧嚣心/眼花/重核/树脂）
+            // 致命伤害与危险（仙人掌、熔岩块、营火、凋零玫瑰、滴水石、爆炸物、锚、试炼宝库、幽匿尖啸体/感测体、苍白花园喧嚣心/眼花/重核/树脂）
             "MAGMA", "CAMPFIRE", "WITHER", "CACTUS", "POINTED_DRIPSTONE", "TNT", "RESPAWN_ANCHOR",
             "CREAKING_HEART", "EYE_BLOSSOM", "HEAVY_CORE", "TRIAL_SPAWNER", "VAULT", "RESIN_CLUMP", "RESIN_BLOCK",
+            "SCULK_SHRIEKER", "SCULK_SENSOR",
             // 踩踏塌陷、瞬间掉落陷阱
             "BIG_DRIPLEAF", "SCAFFOLDING", "PALE_HANGING_MOSS",
             // 极细、异形、站不稳的表面与细小摆件
@@ -72,8 +73,7 @@ public final class SafetyValidator {
             if (!isCoral) {
                 // 1. 匹配脚底危险方块
                 for (String kw : floorKeywords) {
-                    boolean match = kw.equals("MUD") ? (name.equals("MUD") || name.equals("MUDDY_MANGROVE_ROOTS")) : name.contains(kw);
-                    if (match) {
+                    if (name.contains(kw)) {
                         DANGEROUS_FLOOR_MATERIALS.add(mat);
                         break;
                     }
@@ -217,7 +217,6 @@ public final class SafetyValidator {
         if (feet == null) return false;
 
         Block head = feet.getRelative(BlockFace.UP);
-
         for (BlockFace face : HORIZONTAL_FACES) {
             Material feetNeighbor = feet.getRelative(face).getType();
             if (DANGEROUS_SURROUNDING_MATERIALS.contains(feetNeighbor)) {

@@ -7,12 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 > 中文版请见 [CHANGELOG_Chinese.md](CHANGELOG_Chinese.md).
 
-## [1.1.1] - 2026-10-24
+## [1.1.1] - 2026-10-31
 
 ### Fixed
 - **Spawn/Respawn Radius Configuration Override Bug (Core)**:
   - Fixed a hardcoded boundary clamp in `WorldSpawnSettings` where `maxRadius` was forced to `Math.max(minRadius + 100, ...)`. Previously, when configuring a small spawn radius (such as `max-radius: 10`, `20`, or `50`), the maximum outer radius was forcefully clamped to at least 100 blocks, causing custom small or compact spawn configurations to appear ineffective during searches and benchmark tests.
   - Improved radius defensive parsing: fully supports custom non-negative radius ranges (including micro-radii and tight spawn rings); automatically swaps inverted configurations when `min-radius > max-radius`, and pairs with `SafeLocationFinder`'s built-in offset guarantee to prevent mathematical `NaN` or negative root errors.
+- **Cross-World First-Join Random Spawn False Interception (`PlayerDataUtils` & `PlayerWorldChangeListener`)**:
+  - Added `PlayerDataUtils.hasExistingWorldPlayerData()` to inspect only the target world's dedicated playerdata folder on cross-world transitions, fixing a bug where global `player.hasPlayedBefore()` or primary world `playerdata` caused `ignore-existing-playerdata: true` to falsely skip first-join random spawns in secondary worlds.
+  - Removed redundant delayed `hasExistingPlayerData()` checks inside the 5-tick callback in `PlayerJoinListener` and `PlayerWorldChangeListener` to prevent newly created session stats/data files from aborting legitimate first-join teleports.
+  - Added `anarchyspawn.use` permission checks across `PlayerJoinListener`, `PlayerRespawnListener`, and `PlayerWorldChangeListener`.
+- **Overworld Surface Direct Penetration Fast-Path & Canopy Scan Fix (`SafeLocationFinder`)**:
+  - Fixed an off-by-one height check where `surfaceY - 1` (the solid subsurface block) was evaluated before `surfaceY` on 1.15+ servers, causing the 1-iteration fast path to fail on standard solid terrain and always fall back to loop scanning.
+  - Expanded the local surface neighborhood scan window down to `surfaceY - 32` to penetrate tall jungle/dark oak canopies, and prevented Overworld searches from falling through into subterranean caves when terrain exceeds `max-y`.
+- **Targeted Spawn Protection Cleanup & Folia Thread Confinement (`TeleportService`)**:
+  - Fixed `cancelAllProtectionTasks()` iterating over all online players (`Bukkit.getOnlinePlayers()`) and stripping invulnerability from players not managed by AnarchySpawn (such as admins in god/creative mode); now strictly resets only players tracked in `activeProtectionSessions` and dispatches via `FoliaScheduler.runForPlayer` when active on Folia.
+- **Folia Scheduler Reflection Encapsulation Fix (`FoliaScheduler`)**:
+  - Resolved scheduler and `ScheduledTask` methods against their public Paper/Folia interfaces with `setAccessible(true)` fallback, preventing `IllegalAccessException` under Java 17/21 strong encapsulation when invoking methods on package-private Folia implementation classes.
+- **Cache Pool Chained Refill, Terrain Re-Validation & Refill Guard (`LocationCachePool`)**:
+  - Added automatic chained batch refills in `refillWorld()` until `target-size` is reached, fixing slow initial warm-up and `/as cache` only adding up to 3 points per invocation.
+  - Added `isLocationStillSafeIfLoaded()` verification in `LocationCachePool.poll()` so cached coordinates whose chunks were modified or griefed with hazards while loaded are automatically discarded.
+  - Unified the `isRefilling` guard release to the next tick after per-world task dispatch on both Folia and classic runtimes.
+- **Fallback Teleport Status & Benchmark Attempt Counter Accuracy**:
+  - Fixed `TeleportService` returning `true` when falling back to `fallback-location`, ensuring `/as tp` accurately displays `command.tp-failed` on fallback and automatically retries live search if a cached teleport fails.
+  - Fixed off-by-one attempt reporting (`maxAttempts + 1`) and two-phase cumulative attempt tracking in `SafeLocationFinder`.
+- **SafetyValidator Sculk Hazards, Config Defaults & Command Polish**:
+  - Added `SCULK_SHRIEKER` and `SCULK_SENSOR` to `SafetyValidator` floor hazard filters and removed dead `MUD` branch code.
+  - Aligned `ConfigManager` fallback defaults (`override-bed`, `override-anchor`, `death-hotspots.radius`) with `config.yml`, removed the hardcoded `10.0` minimum clamp on `death-hotspots.radius`, and added backward-compatible fallback for `safety-filter.enable-safe-spawn-check`.
+  - Added documented subcommand aliases (`status`, `benchmark`, `refill`) and `anarchyspawn.admin` permission fallback in `AnarchySpawnCommand`, lazy thread-safe initialization in `PDCUtils`, `[noprefix]`/`[prefix]` support for `\n`-split messages in `MessageManager`, and fixed the `Windswept Hills` typo in `en_US.yml`.
 
 ## [1.1.0] - 2026-10-15
 

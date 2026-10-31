@@ -30,6 +30,10 @@ public class PlayerRespawnListener implements Listener {
             return;
         }
 
+        if (!player.hasPermission("anarchyspawn.use")) {
+            return;
+        }
+
         try {
             if (event.isBedSpawn() && !plugin.getConfigManager().isOverrideBed()) {
                 return;

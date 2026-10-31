@@ -43,12 +43,15 @@ public class AnarchySpawnCommand implements CommandExecutor {
                 handleSetCenter(sender, label, args);
                 break;
             case "info":
+            case "status":
                 handleInfo(sender);
                 break;
             case "test":
+            case "benchmark":
                 handleTest(sender, args);
                 break;
             case "cache":
+            case "refill":
                 handleCache(sender);
                 break;
             default:
@@ -59,8 +62,12 @@ public class AnarchySpawnCommand implements CommandExecutor {
         return true;
     }
 
+    private boolean hasSubPermission(CommandSender sender, String node) {
+        return sender.hasPermission(node) || sender.hasPermission("anarchyspawn.admin");
+    }
+
     private void handleReload(CommandSender sender) {
-        if (!sender.hasPermission("anarchyspawn.reload")) {
+        if (!hasSubPermission(sender, "anarchyspawn.reload")) {
             plugin.getMessageManager().sendMessage(sender, "command.no-permission", null);
             return;
         }
@@ -71,7 +78,7 @@ public class AnarchySpawnCommand implements CommandExecutor {
     }
 
     private void handleTp(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("anarchyspawn.tp")) {
+        if (!hasSubPermission(sender, "anarchyspawn.tp")) {
             plugin.getMessageManager().sendMessage(sender, "command.no-permission", null);
             return;
         }
@@ -111,8 +118,8 @@ public class AnarchySpawnCommand implements CommandExecutor {
         }
 
         plugin.getMessageManager().sendMessage(sender, "command.tp-searching", null);
-        final String finalWorldName = worldName;
-        plugin.getTeleportService().teleportToRandomSpawn(target, worldName, false).thenAccept(success -> {
+        final String finalWorldName = settings.getWorldName();
+        plugin.getTeleportService().teleportToRandomSpawn(target, finalWorldName, false).thenAccept(success -> {
             FoliaScheduler.runForPlayer(plugin, target, () -> {
                 Map<String, String> p = new HashMap<>();
                 p.put("player", target.getName());
@@ -127,7 +134,7 @@ public class AnarchySpawnCommand implements CommandExecutor {
                     p.put("z", "0");
                 }
                 String msgPath = success ? "command.tp-success" : "command.tp-failed";
-                if (sender instanceof Player) {
+                if (sender instanceof Player && !sender.equals(target)) {
                     FoliaScheduler.runForPlayer(plugin, (Player) sender, () -> {
                         plugin.getMessageManager().sendMessage(sender, msgPath, p);
                     });
@@ -139,7 +146,7 @@ public class AnarchySpawnCommand implements CommandExecutor {
     }
 
     private void handleSetCenter(CommandSender sender, String label, String[] args) {
-        if (!sender.hasPermission("anarchyspawn.setcenter")) {
+        if (!hasSubPermission(sender, "anarchyspawn.setcenter")) {
             plugin.getMessageManager().sendMessage(sender, "command.no-permission", null);
             return;
         }
@@ -175,7 +182,7 @@ public class AnarchySpawnCommand implements CommandExecutor {
             FoliaScheduler.runAsync(plugin, () -> plugin.getCachePool().refillAllWorlds());
 
             Map<String, String> p = new HashMap<>();
-            p.put("world", worldName);
+            p.put("world", settings.getWorldName());
             p.put("x", String.valueOf(x));
             p.put("z", String.valueOf(z));
             plugin.getMessageManager().sendMessage(sender, "command.setcenter-success", p);
@@ -185,7 +192,7 @@ public class AnarchySpawnCommand implements CommandExecutor {
     }
 
     private void handleInfo(CommandSender sender) {
-        if (!sender.hasPermission("anarchyspawn.info")) {
+        if (!hasSubPermission(sender, "anarchyspawn.info")) {
             plugin.getMessageManager().sendMessage(sender, "command.no-permission", null);
             return;
         }
@@ -205,15 +212,15 @@ public class AnarchySpawnCommand implements CommandExecutor {
     }
 
     private void handleTest(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("anarchyspawn.test")) {
+        if (!hasSubPermission(sender, "anarchyspawn.test")) {
             plugin.getMessageManager().sendMessage(sender, "command.no-permission", null);
             return;
         }
 
         String worldName = args.length >= 2 ? args[1]
                 : (sender instanceof Player ? ((Player) sender).getWorld().getName() : "world");
-        World world = Bukkit.getWorld(worldName);
         WorldSpawnSettings settings = plugin.getConfigManager().getWorldSettings(worldName);
+        World world = settings != null ? Bukkit.getWorld(settings.getWorldName()) : Bukkit.getWorld(worldName);
 
         if (world == null || settings == null) {
             Map<String, String> p = new HashMap<>();
@@ -224,7 +231,7 @@ public class AnarchySpawnCommand implements CommandExecutor {
 
         plugin.getMessageManager().sendMessage(sender, "command.test-header", null);
         Map<String, String> searchP = new HashMap<>();
-        searchP.put("world", worldName);
+        searchP.put("world", settings.getWorldName());
         plugin.getMessageManager().sendMessage(sender, "command.test-searching", searchP);
 
         plugin.getLocationFinder().findSafeLocationAsync(world, settings).thenAccept(result -> {
@@ -250,7 +257,7 @@ public class AnarchySpawnCommand implements CommandExecutor {
     }
 
     private void handleCache(CommandSender sender) {
-        if (!sender.hasPermission("anarchyspawn.cache")) {
+        if (!hasSubPermission(sender, "anarchyspawn.cache")) {
             plugin.getMessageManager().sendMessage(sender, "command.no-permission", null);
             return;
         }

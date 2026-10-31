@@ -67,12 +67,23 @@ public class LocationCachePool {
             CachedLocation cached = queue.poll();
             if (cached != null && (now - cached.getTimestamp()) <= maxAgeMs) {
                 Location loc = cached.getLocation();
-                if (loc != null && plugin.getDeathHotspotManager() != null &&
+                if (loc == null) {
+                    continue;
+                }
+                if (plugin.getDeathHotspotManager() != null &&
                         plugin.getDeathHotspotManager().isNearHotspot(worldName, loc.getX(), loc.getZ())) {
                     if (plugin.getConfigManager().isDebug()) {
                         plugin.getLogger().info(String.format(
                                 "[CachePool] Discarded cached point in '%s' (X:%.1f, Z:%.1f) because it became a death hotspot.",
                                 worldName, loc.getX(), loc.getZ()));
+                    }
+                    continue;
+                }
+                if (plugin.getLocationFinder() != null && !plugin.getLocationFinder().isLocationStillSafeIfLoaded(loc)) {
+                    if (plugin.getConfigManager().isDebug()) {
+                        plugin.getLogger().info(String.format(
+                                "[CachePool] Discarded cached point in '%s' (X:%.1f, Y:%.1f, Z:%.1f) because terrain is no longer safe.",
+                                worldName, loc.getX(), loc.getY(), loc.getZ()));
                     }
                     continue;
                 }
@@ -115,9 +126,8 @@ public class LocationCachePool {
     public void refillAllWorlds() {
         if (!isRunning || !plugin.getConfigManager().isCacheEnabled() || !plugin.isEnabled())
             return;
-        // The guard is released only after every per-world region task has finished
-        // dispatching its async searches, preventing overlapping refill rounds that
-        // would otherwise overfill the cache queues.
+        // The guard is released on the next tick after all per-world tasks have been queued,
+        // preventing overlapping refill rounds while in-flight counters throttle concurrency.
         if (!isRefilling.compareAndSet(false, true))
             return;
 
@@ -140,15 +150,7 @@ public class LocationCachePool {
                 FoliaScheduler.runForRegion(plugin, world, () -> refillWorld(worldKey, settings, world, targetSize));
             }
         } finally {
-            // On non-Folia runtimes runForRegion executes synchronously on the main
-            // thread, so the guard can be released immediately. On Folia the region
-            // tasks are queued asynchronously; release the guard on the next tick so
-            // the in-flight counters (not this flag) throttle concurrent work.
-            if (FoliaScheduler.isFolia()) {
-                FoliaScheduler.runTimerGlobal(plugin, () -> isRefilling.set(false), 1L, -1L);
-            } else {
-                isRefilling.set(false);
-            }
+            FoliaScheduler.runTimerGlobal(plugin, () -> isRefilling.set(false), 1L, -1L);
         }
     }
 
@@ -157,7 +159,7 @@ public class LocationCachePool {
      * world's region thread (Folia) or the main thread (Spigot/Paper).
      */
     private void refillWorld(String worldKey, WorldSpawnSettings settings, World world, int targetSize) {
-        if (!plugin.isEnabled())
+        if (!isRunning || !plugin.isEnabled())
             return;
 
         Queue<CachedLocation> queue = pool.computeIfAbsent(worldKey, k -> new ConcurrentLinkedQueue<>());
@@ -179,13 +181,20 @@ public class LocationCachePool {
             for (int i = 0; i < toLaunch; i++) {
                 inFlight.incrementAndGet();
                 plugin.getLocationFinder().findSafeLocationAsync(world, settings).whenComplete((result, ex) -> {
-                    inFlight.decrementAndGet();
-                    if (result != null && result.isSuccess() && result.getLocation() != null
-                            && plugin.isEnabled()) {
+                    int remainingInFlight = inFlight.decrementAndGet();
+                    if (!isRunning || !plugin.isEnabled()) {
+                        return;
+                    }
+                    if (result != null && result.isSuccess() && result.getLocation() != null) {
                         queue.offer(new CachedLocation(result.getLocation(), System.currentTimeMillis()));
                         if (plugin.getConfigManager().isDebug()) {
                             plugin.getLogger().info("[CachePool] Cached safe point for " + worldKey + " (Size: "
-                                    + queue.size() + ")");
+                                    + queue.size() + "/" + targetSize + ")");
+                        }
+                        // Chain next batch if pool has not yet reached targetSize
+                        if (queue.size() + remainingInFlight < targetSize) {
+                            FoliaScheduler.runForRegion(plugin, world,
+                                    () -> refillWorld(worldKey, settings, world, targetSize));
                         }
                     }
                 });

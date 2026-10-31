@@ -58,12 +58,13 @@ public final class FoliaScheduler {
                     Method getRegion = Bukkit.class.getMethod("getRegionScheduler");
                     regionScheduler = getRegion.invoke(null);
                     if (regionScheduler != null) {
-                        Class<?> rClass = regionScheduler.getClass();
+                        Class<?> rClass = getPublicSchedulerInterface(regionScheduler,
+                                "io.papermc.paper.threadedregions.scheduler.RegionScheduler");
                         try {
-                            regionExecuteMethod = rClass.getMethod("execute", Plugin.class, World.class, int.class, int.class, Runnable.class);
+                            regionExecuteMethod = findAccessibleMethod(rClass, "execute", Plugin.class, World.class, int.class, int.class, Runnable.class);
                         } catch (NoSuchMethodException ignored) {
                             try {
-                                regionRunMethod = rClass.getMethod("run", Plugin.class, World.class, int.class, int.class, Consumer.class);
+                                regionRunMethod = findAccessibleMethod(rClass, "run", Plugin.class, World.class, int.class, int.class, Consumer.class);
                             } catch (NoSuchMethodException ignored2) {}
                         }
                     }
@@ -76,17 +77,18 @@ public final class FoliaScheduler {
                     Method getGlobal = Bukkit.class.getMethod("getGlobalRegionScheduler");
                     globalScheduler = getGlobal.invoke(null);
                     if (globalScheduler != null) {
-                        Class<?> gClass = globalScheduler.getClass();
+                        Class<?> gClass = getPublicSchedulerInterface(globalScheduler,
+                                "io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
                         try {
-                            globalExecuteMethod = gClass.getMethod("execute", Plugin.class, Runnable.class);
+                            globalExecuteMethod = findAccessibleMethod(gClass, "execute", Plugin.class, Runnable.class);
                         } catch (NoSuchMethodException ignored) {}
 
                         try {
-                            globalRunDelayedMethod = gClass.getMethod("runDelayed", Plugin.class, Consumer.class, long.class);
+                            globalRunDelayedMethod = findAccessibleMethod(gClass, "runDelayed", Plugin.class, Consumer.class, long.class);
                         } catch (NoSuchMethodException ignored) {}
 
                         try {
-                            globalRunAtFixedRateMethod = gClass.getMethod("runAtFixedRate", Plugin.class, Consumer.class, long.class, long.class);
+                            globalRunAtFixedRateMethod = findAccessibleMethod(gClass, "runAtFixedRate", Plugin.class, Consumer.class, long.class, long.class);
                         } catch (NoSuchMethodException ignored) {}
                     }
                 } catch (Throwable ignored) {
@@ -98,8 +100,9 @@ public final class FoliaScheduler {
                     Method getAsync = Bukkit.class.getMethod("getAsyncScheduler");
                     asyncScheduler = getAsync.invoke(null);
                     if (asyncScheduler != null) {
-                        Class<?> aClass = asyncScheduler.getClass();
-                        asyncRunNowMethod = aClass.getMethod("runNow", Plugin.class, Consumer.class);
+                        Class<?> aClass = getPublicSchedulerInterface(asyncScheduler,
+                                "io.papermc.paper.threadedregions.scheduler.AsyncScheduler");
+                        asyncRunNowMethod = findAccessibleMethod(aClass, "runNow", Plugin.class, Consumer.class);
                     }
                 } catch (Throwable ignored) {
                     asyncScheduler = null;
@@ -113,6 +116,23 @@ public final class FoliaScheduler {
     }
 
     private FoliaScheduler() {
+    }
+
+    private static Class<?> getPublicSchedulerInterface(Object instance, String interfaceName) {
+        try {
+            return Class.forName(interfaceName);
+        } catch (ClassNotFoundException ignored) {
+            return instance.getClass();
+        }
+    }
+
+    private static Method findAccessibleMethod(Class<?> clazz, String name, Class<?>... parameterTypes) throws NoSuchMethodException {
+        Method m = clazz.getMethod(name, parameterTypes);
+        try {
+            m.setAccessible(true);
+        } catch (Throwable ignored) {
+        }
+        return m;
     }
 
     /**
@@ -133,15 +153,16 @@ public final class FoliaScheduler {
                     Method getScheduler = player.getClass().getMethod("getScheduler");
                     Object entityScheduler = getScheduler.invoke(player);
                     if (entityScheduler != null) {
-                        Class<?> eClass = entityScheduler.getClass();
+                        Class<?> eClass = getPublicSchedulerInterface(entityScheduler,
+                                "io.papermc.paper.threadedregions.scheduler.EntityScheduler");
                         try {
                             // Try execute(Plugin, Runnable, Runnable, long)
-                            Method exec = eClass.getMethod("execute", Plugin.class, Runnable.class, Runnable.class, long.class);
+                            Method exec = findAccessibleMethod(eClass, "execute", Plugin.class, Runnable.class, Runnable.class, long.class);
                             exec.invoke(entityScheduler, plugin, task, null, 1L);
                             return null;
                         } catch (NoSuchMethodException e) {
                             // Try run(Plugin, Consumer<ScheduledTask>, Runnable)
-                            Method runM = eClass.getMethod("run", Plugin.class, Consumer.class, Runnable.class);
+                            Method runM = findAccessibleMethod(eClass, "run", Plugin.class, Consumer.class, Runnable.class);
                             Consumer<Object> consumer = scheduledTask -> task.run();
                             runM.invoke(entityScheduler, plugin, consumer, null);
                             return null;
@@ -167,9 +188,10 @@ public final class FoliaScheduler {
                     Method getScheduler = player.getClass().getMethod("getScheduler");
                     Object entityScheduler = getScheduler.invoke(player);
                     if (entityScheduler != null) {
-                        Class<?> eClass = entityScheduler.getClass();
+                        Class<?> eClass = getPublicSchedulerInterface(entityScheduler,
+                                "io.papermc.paper.threadedregions.scheduler.EntityScheduler");
                         try {
-                            Method runDelayed = eClass.getMethod("runDelayed", Plugin.class, Consumer.class, Runnable.class, long.class);
+                            Method runDelayed = findAccessibleMethod(eClass, "runDelayed", Plugin.class, Consumer.class, Runnable.class, long.class);
                             Consumer<Object> consumer = scheduledTask -> task.run();
                             runDelayed.invoke(entityScheduler, plugin, consumer, null, Math.max(1L, ticks));
                             return null;
@@ -268,7 +290,9 @@ public final class FoliaScheduler {
             if (taskHandle instanceof BukkitTask) {
                 ((BukkitTask) taskHandle).cancel();
             } else {
-                Method cancelMethod = taskHandle.getClass().getMethod("cancel");
+                Class<?> taskClass = getPublicSchedulerInterface(taskHandle,
+                        "io.papermc.paper.threadedregions.scheduler.ScheduledTask");
+                Method cancelMethod = findAccessibleMethod(taskClass, "cancel");
                 cancelMethod.invoke(taskHandle);
             }
         } catch (Throwable ignored) {
