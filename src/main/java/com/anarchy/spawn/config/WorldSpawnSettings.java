@@ -25,7 +25,7 @@ public class WorldSpawnSettings {
         this.worldName = worldName;
         this.enabled = section.getBoolean("enabled", true);
 
-        // First join random spawn option per world
+        // 单个世界独立的首次加入随机出生选项
         if (section.isConfigurationSection("first-join")) {
             ConfigurationSection fjSec = section.getConfigurationSection("first-join");
             this.firstJoin = fjSec != null && fjSec.getBoolean("enabled", true);
@@ -46,7 +46,7 @@ public class WorldSpawnSettings {
             this.ignoreExistingPlayerData = true;
         }
 
-        // Center
+        // 中心坐标
         if (section.isSet("center.x") && section.isSet("center.z")) {
             this.centerX = section.getDouble("center.x", 0.0);
             this.centerZ = section.getDouble("center.z", 0.0);
@@ -73,7 +73,7 @@ public class WorldSpawnSettings {
         this.minY = section.getInt("min-y", 60);
         this.maxY = Math.max(minY + 2, section.getInt("max-y", 310));
 
-        // Fallback
+        // 保底回退坐标
         this.fallbackX = section.getDouble("fallback-location.x", 0.0);
         this.fallbackY = section.getDouble("fallback-location.y", 80.0);
         this.fallbackZ = section.getDouble("fallback-location.z", 0.0);

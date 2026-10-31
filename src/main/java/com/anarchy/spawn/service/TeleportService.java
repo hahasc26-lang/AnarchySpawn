@@ -54,8 +54,7 @@ public class TeleportService {
         final org.bukkit.World finalWorld = targetWorld;
 
         Location cachedLoc = plugin.getCachePool().poll(settings.getWorldName());
-        // A cached location is only usable when its world is currently loaded; a stale
-        // cache entry referencing an unloaded world would make teleportAsync fail.
+        // 缓存位置仅在所属世界当前已加载时才可用；引用已卸载世界的过期缓存项会导致 teleportAsync 失败。
         if (cachedLoc != null && cachedLoc.getWorld() != null
                 && Bukkit.getWorld(cachedLoc.getWorld().getName()) == null) {
             cachedLoc = null;
@@ -72,11 +71,11 @@ public class TeleportService {
                         FoliaScheduler.runForPlayer(plugin, player, () -> {
                             applyEffectsAndFeedback(player, finalCachedLoc, settings, isFirstJoin);
                         });
-                        // Trigger background refill since we consumed a cached point
+                        // 消耗了缓存点，触发后台异步补充
                         FoliaScheduler.runAsync(plugin, () -> plugin.getCachePool().refillAllWorlds());
                         future.complete(true);
                     } else {
-                        // Cached teleport failed, fall back to live search
+                        // 缓存点传送失败，回退到实时搜索
                         searchAndTeleportAsync(player, finalWorld, settings, isFirstJoin, future);
                     }
                 });
@@ -116,7 +115,7 @@ public class TeleportService {
                             }
                         });
                     }
-                    // Complete with true only if a safe random point was found and teleport succeeded
+                    // 仅当成功找到安全随机点且传送成功时，才完成为 true
                     future.complete(!isFallback && success);
                 });
             });
@@ -147,11 +146,11 @@ public class TeleportService {
             }
             player.setNoDamageTicks(invulSecs * 20);
 
-            // Generate a unique session token for this protection window
+            // 为本次保护窗口生成唯一的会话令牌
             long sessionId = System.currentTimeMillis();
             activeProtectionSessions.put(player.getUniqueId(), sessionId);
 
-            // Cancel any previous protection task
+            // 取消此前的任何保护任务
             BukkitTask previousTask = activeProtectionTasks.remove(player.getUniqueId());
             if (previousTask != null) {
                 previousTask.cancel();
@@ -160,7 +159,7 @@ public class TeleportService {
             BukkitTask protectionTask = FoliaScheduler.runForPlayerLater(plugin, player, () -> {
                 Long currentSession = activeProtectionSessions.get(player.getUniqueId());
                 if (currentSession == null || currentSession != sessionId) {
-                    return; // Protection was cancelled or superseded by a newer spawn
+                    return; // 保护已被取消或被更新的出生事件所覆盖
                 }
                 activeProtectionSessions.remove(player.getUniqueId());
                 activeProtectionTasks.remove(player.getUniqueId());
@@ -359,7 +358,7 @@ public class TeleportService {
             return null;
         String clean = name.trim().toUpperCase(Locale.ROOT).replace(" ", "_");
 
-        // 1. Try getByName with alias options (1.12.2 legacy compatibility)
+        // 1. 尝试使用别名选项通过 getByName 获取（兼容 1.12.2 旧版本）
         String[] aliases = POTION_ALIASES.get(clean);
         if (aliases != null) {
             for (String alias : aliases) {
@@ -377,7 +376,7 @@ public class TeleportService {
         } catch (Throwable ignored) {
         }
 
-        // 2. Try getByKey for 1.13+ NamespacedKey lookup
+        // 2. 尝试使用 getByKey 进行 1.13+ NamespacedKey 查找
         String standardKey = aliases != null && aliases.length >= 3 ? aliases[2] : clean.toLowerCase(Locale.ROOT);
         try {
             PotionEffectType type = PotionEffectType.getByKey(NamespacedKey.minecraft(standardKey));

@@ -126,8 +126,8 @@ public class LocationCachePool {
     public void refillAllWorlds() {
         if (!isRunning || !plugin.getConfigManager().isCacheEnabled() || !plugin.isEnabled())
             return;
-        // The guard is released on the next tick after all per-world tasks have been queued,
-        // preventing overlapping refill rounds while in-flight counters throttle concurrency.
+        // 防重入标记将在所有世界的任务进入队列后的下一 tick 释放，
+        // 防止多轮补充任务重叠，并通过正在进行的计数器控制并发度。
         if (!isRefilling.compareAndSet(false, true))
             return;
 
@@ -145,8 +145,7 @@ public class LocationCachePool {
                 if (world == null)
                     continue;
 
-                // World/chunk data must be accessed on the owning world's region thread
-                // (Folia) or the main thread (Spigot/Paper). FoliaScheduler handles both.
+                // 世界/区块数据必须在归属世界的区域线程（Folia）或主线程（Spigot/Paper）上访问。FoliaScheduler 会统一处理。
                 FoliaScheduler.runForRegion(plugin, world, () -> refillWorld(worldKey, settings, world, targetSize));
             }
         } finally {
@@ -155,8 +154,7 @@ public class LocationCachePool {
     }
 
     /**
-     * Refills the cache queue for a single world. Must be invoked on the owning
-     * world's region thread (Folia) or the main thread (Spigot/Paper).
+     * 补充单个世界的缓存队列。必须在归属世界的区域线程（Folia）或主线程（Spigot/Paper）上调用。
      */
     private void refillWorld(String worldKey, WorldSpawnSettings settings, World world, int targetSize) {
         if (!isRunning || !plugin.isEnabled())
@@ -189,9 +187,9 @@ public class LocationCachePool {
                         queue.offer(new CachedLocation(result.getLocation(), System.currentTimeMillis()));
                         if (plugin.getConfigManager().isDebug()) {
                             plugin.getLogger().info("[CachePool] Cached safe point for " + worldKey + " (Size: "
-                                    + queue.size() + "/" + targetSize + ")");
+                                     + queue.size() + "/" + targetSize + ")");
                         }
-                        // Chain next batch if pool has not yet reached targetSize
+                        // 若缓存池仍未达到目标容量，则链式触发下一批次查找
                         if (queue.size() + remainingInFlight < targetSize) {
                             FoliaScheduler.runForRegion(plugin, world,
                                     () -> refillWorld(worldKey, settings, world, targetSize));

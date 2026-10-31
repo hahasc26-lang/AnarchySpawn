@@ -16,13 +16,13 @@ import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Searches for a safe location within the configured world radius.
- * Uses uniform annular area distribution: r = sqrt(u * (R_max^2 - R_min^2) + R_min^2)
+ * 在配置的世界半径范围内寻找安全位置。
+ * 采用均匀环形面积分布算法：r = sqrt(u * (R_max^2 - R_min^2) + R_min^2)
  *
- * Implements two-phase search:
- * 1. Primary phase: Searches for safe locations respecting Death Hotspot avoidance.
- * 2. Secondary fallback phase: If primary phase fails to find a location due to hotspots,
- *    retries search ignoring hotspots so player can still spawn normally in the wilderness.
+ * 实现两阶段搜索：
+ * 1. 首要阶段：在遵循死亡热点规避的前提下搜索安全位置。
+ * 2. 二级保底阶段：若因热点过滤导致首要阶段找不到位置，
+ *    则忽略热点重新搜索，确保玩家依然能在荒野正常出生。
  */
 public class SafeLocationFinder {
 
@@ -34,8 +34,8 @@ public class SafeLocationFinder {
     }
 
     /**
-     * Asynchronously finds a safe location, falling back to normal spawn ignoring hotspots
-     * if primary hotspot-filtered search exceeds max attempts.
+     * 异步搜索安全位置；若首要的热点过滤搜索超过最大尝试次数，
+     * 则自动回退到忽略热点的普通安全搜索。
      */
     public CompletableFuture<SearchResult> findSafeLocationAsync(World world, WorldSpawnSettings settings) {
         CompletableFuture<SearchResult> future = new CompletableFuture<>();
@@ -60,7 +60,7 @@ public class SafeLocationFinder {
         long startTime = System.currentTimeMillis();
         int maxAttempts = plugin.getConfigManager().getMaxSearchAttempts();
 
-        // Phase 1: Search with hotspot avoidance check enabled
+        // 阶段 1：启用死亡热点规避检查进行搜索
         searchNextAttemptAsync(world, settings, 1, 0, maxAttempts, true, startTime, future);
         return future;
     }
@@ -82,7 +82,7 @@ public class SafeLocationFinder {
 
         if (currentAttempt > maxAttempts) {
             int executedAttempts = attemptOffset + maxAttempts;
-            // If primary search with hotspot avoidance failed and there were active hotspots, retry ignoring hotspots
+            // 若带有热点规避的首要搜索失败且存在活跃热点，则重试忽略热点的搜索
             boolean hasActiveHotspots = plugin.getDeathHotspotManager() != null
                     && plugin.getDeathHotspotManager().getActiveHotspotsCount(world.getName()) > 0;
             if (checkHotspots && plugin.getConfigManager().isDeathHotspotEnabled() && hasActiveHotspots) {
@@ -95,7 +95,7 @@ public class SafeLocationFinder {
                 return;
             }
 
-            // Both passes exhausted; return emergency fallback location
+            // 两轮尝试均耗尽；返回紧急保底位置
             Location fallback = settings.getFallbackLocation(world);
             long duration = System.currentTimeMillis() - startTime;
             future.complete(new SearchResult(fallback, executedAttempts, duration, false));
@@ -153,14 +153,14 @@ public class SafeLocationFinder {
     }
 
     /**
-     * Synchronously finds a safe location with secondary fallback ignoring hotspots if needed.
+     * 同步搜索安全位置，并在需要时通过忽略热点的二级机制保底。
      */
     public SearchResult findSafeLocationSync(World world, WorldSpawnSettings settings) {
         long startTime = System.currentTimeMillis();
         int maxAttempts = plugin.getConfigManager().getMaxSearchAttempts();
         int totalAttempts = maxAttempts;
 
-        // Phase 1: Try finding a location with death hotspot avoidance
+        // 阶段 1：尝试在规避死亡热点的前提下寻找位置
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             Location safeLoc = sampleAndEvaluateSync(world, settings, true);
             if (safeLoc != null) {
@@ -169,7 +169,7 @@ public class SafeLocationFinder {
             }
         }
 
-        // Phase 2: If Phase 1 failed due to hotspots and active hotspots exist, retry search ignoring hotspots
+        // 阶段 2：若阶段 1 因热点规避失败且存在活跃热点，则忽略热点重试搜索
         boolean hasActiveHotspots = plugin.getDeathHotspotManager() != null
                 && plugin.getDeathHotspotManager().getActiveHotspotsCount(world.getName()) > 0;
         if (plugin.getConfigManager().isDeathHotspotEnabled() && hasActiveHotspots) {
@@ -220,7 +220,7 @@ public class SafeLocationFinder {
             return null;
         }
 
-        // Death Hotspot check: avoid recent PvP / death trap areas (if checkHotspots is enabled)
+        // 死亡热点检查：避免生成在近期的 PvP / 死亡陷阱区域（若启用了 checkHotspots）
         if (checkHotspots && plugin.getDeathHotspotManager() != null && plugin.getDeathHotspotManager().isNearHotspot(world.getName(), x, z)) {
             return null;
         }
@@ -230,7 +230,7 @@ public class SafeLocationFinder {
         int maxY = Math.min(worldMax - 2, settings.getMaxY());
         int minY = Math.max(worldMin + 2, settings.getMinY());
 
-        // Nether environment protection: never spawn on bedrock ceiling (> 127)
+        // 地狱环境保护：绝不生成在基岩天花板上方 (> 127)
         try {
             if (world.getEnvironment() == World.Environment.NETHER) {
                 maxY = Math.min(maxY, 120);
@@ -242,7 +242,7 @@ public class SafeLocationFinder {
             return null;
         }
 
-        // Quick column biome pre-check
+        // 针对整列进行快速生物群系预检
         try {
             Biome sampleBiome = PaperCompatibility.getBiomeAt(world, x, (maxY + minY) / 2, z);
             if (!SafetyValidator.isSafeBiome(plugin, sampleBiome)) {
@@ -257,14 +257,14 @@ public class SafeLocationFinder {
         } catch (Throwable ignored) {
         }
 
-        // --- Surface Direct Penetration Optimization (98%+ speedup) ---
-        // In Overworld dimensions, directly query surface heightmap to bypass scanning 250+ vertical blocks
+        // --- 地表快速直达优化（提速 98%+） ---
+        // 在主世界维度中，直接查询地表高度图以跳过逐格扫描 250+ 垂直高度的消耗
         if (isOverworld) {
             try {
                 int surfaceY = world.getHighestBlockYAt(x, z);
                 if (surfaceY >= minY && surfaceY <= maxY + 1) {
-                    // On 1.15+, getHighestBlockYAt returns the highest non-air block itself (e.g. grass_block).
-                    // On 1.12.2-1.14.4 (or when tall grass/snow sits on top), surfaceY may be passable, so fallback to surfaceY - 1.
+                    // 在 1.15+ 中，getHighestBlockYAt 返回最高非空气方块自身（例如草方块）。
+                    // 在 1.12.2-1.14.4 中（或上方有高草丛/覆雪时），surfaceY 可能是可通过的方块，因此回退到 surfaceY - 1。
                     Block ground = world.getBlockAt(x, Math.min(maxY, surfaceY), z);
                     if (!ground.getType().isSolid() && surfaceY > worldMin) {
                         ground = world.getBlockAt(x, surfaceY - 1, z);
@@ -274,7 +274,7 @@ public class SafeLocationFinder {
                         return new Location(world, x + 0.5, ground.getY() + 1.0, z + 0.5, yaw, 0.0f);
                     }
 
-                    // Targeted scan within surface neighborhood (surface +6 down to -32 blocks to penetrate tall jungle/oak canopies)
+                    // 在地表邻近层级进行定点扫描（地表 +6 至 -32 格，以穿透高大的丛林/橡树树冠）
                     int scanTop = Math.min(maxY, surfaceY + 6);
                     int scanBottom = Math.max(minY, surfaceY - 32);
                     for (int y = scanTop; y >= scanBottom; y--) {
@@ -285,13 +285,13 @@ public class SafeLocationFinder {
                         }
                     }
                 }
-                // In Overworld, do not fall through to subterranean cave scanning if surface exceeded maxY or was unsafe
+                // 在主世界中，若地表高度超出 maxY 或判定不安全，不要回退到地下洞穴扫描
                 return null;
             } catch (Throwable ignored) {
             }
         }
 
-        // Full vertical scan for Nether, End, or non-surface dimensions
+        // 针对地狱、末地或非地表维度的完整垂直列扫描
         for (int y = maxY; y >= minY; y--) {
             Block ground = world.getBlockAt(x, y, z);
             if (isSafeSpawnPoint(world, ground, isOverworld)) {
@@ -304,8 +304,7 @@ public class SafeLocationFinder {
     }
 
     /**
-     * Checks whether the given ground block and the 2-block standing space above it
-     * still constitute a valid, safe spawn point.
+     * 检查给定的脚下方块及其上方 2 格站立空间是否构成有效且安全的出生点。
      */
     public boolean isSafeSpawnPoint(World world, Block ground, boolean isOverworld) {
         if (ground == null) return false;
@@ -322,7 +321,7 @@ public class SafeLocationFinder {
     }
 
     /**
-     * Re-validates a pre-cached spawn location if its chunk is currently loaded in memory.
+     * 若预缓存出生点所在的区块当前已加载在内存中，则重新校验其安全性。
      */
     public boolean isLocationStillSafeIfLoaded(Location loc) {
         if (loc == null || loc.getWorld() == null) return false;
@@ -337,7 +336,7 @@ public class SafeLocationFinder {
             boolean isOverworld = world.getEnvironment() == World.Environment.NORMAL;
             return isSafeSpawnPoint(world, ground, isOverworld);
         } catch (Throwable ignored) {
-            // On Folia, if called off-region thread, defer validation to the teleport thread
+            // 在 Folia 上，若在非对应区域线程中被调用，则推迟校验至传送所在的线程
             return true;
         }
     }

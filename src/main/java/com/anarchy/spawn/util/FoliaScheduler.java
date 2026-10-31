@@ -10,40 +10,39 @@ import java.lang.reflect.Method;
 import java.util.function.Consumer;
 
 /**
- * Unified scheduler abstraction layer that transparently supports both the
- * classic Bukkit/Spigot/Paper scheduler and the Folia regionized scheduler.
+ * 统一调度器抽象层，透明支持经典的 Bukkit/Spigot/Paper 调度器以及 Folia 区域化调度器。
  *
  * <p>
- * Folia enforces strict thread confinement:
- * - All {@link Player} operations must run on the player's owning region thread via {@code player.getScheduler()} (EntityScheduler).
- * - All chunk/block access must run on the owning world's region thread via {@code Bukkit.getRegionScheduler()}.
- * - Global/server-wide tasks must run via {@code Bukkit.getGlobalRegionScheduler()}.
- * - Pure background work must run via {@code Bukkit.getAsyncScheduler()}.
+ * Folia 强制实施严格的线程隔离：
+ * - 针对 {@link Player} 的所有操作必须通过 {@code player.getScheduler()} (EntityScheduler) 运行在玩家归属的区域线程上。
+ * - 针对区块/方块的所有访问必须通过 {@code Bukkit.getRegionScheduler()} 运行在所属世界的区域线程上。
+ * - 全局/全服任务必须通过 {@code Bukkit.getGlobalRegionScheduler()} 运行。
+ * - 纯后台任务必须通过 {@code Bukkit.getAsyncScheduler()} 运行。
  * </p>
  */
 public final class FoliaScheduler {
 
     private static final boolean FOLIA;
 
-    // RegionScheduler (world/chunk-bound work)
+    // RegionScheduler（与世界/区块绑定的任务）
     private static Object regionScheduler;
     private static Method regionExecuteMethod;
     private static Method regionRunMethod;
 
-    // GlobalRegionScheduler (global repeating/one-shot tasks)
+    // GlobalRegionScheduler（全局周期性/单次任务）
     private static Object globalScheduler;
     private static Method globalExecuteMethod;
     private static Method globalRunDelayedMethod;
     private static Method globalRunAtFixedRateMethod;
 
-    // AsyncScheduler (pure background work)
+    // AsyncScheduler（纯后台异步工作）
     private static Object asyncScheduler;
     private static Method asyncRunNowMethod;
 
     static {
         boolean folia = false;
         try {
-            // Standard Folia detection: check for Folia server class or getRegionScheduler on Bukkit
+            // 标准 Folia 环境检测：检查 Folia 服务端类或 Bukkit 上的 getRegionScheduler 方法
             try {
                 Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
                 folia = true;
@@ -136,15 +135,15 @@ public final class FoliaScheduler {
     }
 
     /**
-     * @return {@code true} when running on a Folia-based server.
+     * @return 若当前运行在基于 Folia 的服务端上则返回 {@code true}。
      */
     public static boolean isFolia() {
         return FOLIA;
     }
 
     /**
-     * Runs a task on the owning region thread of the given player.
-     * Replaces {@code Bukkit.getScheduler().runTask(...)} for player-bound work.
+     * 在指定玩家归属的区域线程上运行任务。
+     * 用于替代玩家绑定任务中的 {@code Bukkit.getScheduler().runTask(...)}。
      */
     public static BukkitTask runForPlayer(Plugin plugin, Player player, Runnable task) {
         if (FOLIA) {
@@ -156,12 +155,12 @@ public final class FoliaScheduler {
                         Class<?> eClass = getPublicSchedulerInterface(entityScheduler,
                                 "io.papermc.paper.threadedregions.scheduler.EntityScheduler");
                         try {
-                            // Try execute(Plugin, Runnable, Runnable, long)
+                            // 尝试调用 execute(Plugin, Runnable, Runnable, long)
                             Method exec = findAccessibleMethod(eClass, "execute", Plugin.class, Runnable.class, Runnable.class, long.class);
                             exec.invoke(entityScheduler, plugin, task, null, 1L);
                             return null;
                         } catch (NoSuchMethodException e) {
-                            // Try run(Plugin, Consumer<ScheduledTask>, Runnable)
+                            // 尝试调用 run(Plugin, Consumer<ScheduledTask>, Runnable)
                             Method runM = findAccessibleMethod(eClass, "run", Plugin.class, Consumer.class, Runnable.class);
                             Consumer<Object> consumer = scheduledTask -> task.run();
                             runM.invoke(entityScheduler, plugin, consumer, null);
@@ -171,15 +170,15 @@ public final class FoliaScheduler {
                 } catch (Throwable ignored) {
                 }
             }
-            // Fallback to region or global
+            // 回退到区域调度器或全局调度器
             return runForRegion(plugin, player != null ? player.getWorld() : null, task);
         }
         return Bukkit.getScheduler().runTask(plugin, task);
     }
 
     /**
-     * Runs a task later on the owning region thread of the given player.
-     * Replaces {@code Bukkit.getScheduler().runTaskLater(...)} for player-bound work.
+     * 延迟指定 tick 后在玩家归属的区域线程上运行任务。
+     * 用于替代玩家绑定任务中的 {@code Bukkit.getScheduler().runTaskLater(...)}。
      */
     public static BukkitTask runForPlayerLater(Plugin plugin, Player player, Runnable task, long ticks) {
         if (FOLIA) {
@@ -200,22 +199,22 @@ public final class FoliaScheduler {
                 } catch (Throwable ignored) {
                 }
             }
-            // Fallback to global delayed
+            // 回退到全局延迟任务
             return runTimerGlobal(plugin, task, ticks, -1L);
         }
         return Bukkit.getScheduler().runTaskLater(plugin, task, ticks);
     }
 
     /**
-     * Runs a task on the owning region thread of the given world at chunk (0,0).
+     * 在指定世界位于区块 (0,0) 的归属区域线程上运行任务。
      */
     public static BukkitTask runForRegion(Plugin plugin, World world, Runnable task) {
         return runForRegion(plugin, world, 0, 0, task);
     }
 
     /**
-     * Runs a task on the owning region thread of the specified chunk in the given world.
-     * Essential on Folia to prevent cross-region access violations when reading or modifying blocks.
+     * 在指定世界中对应区块的归属区域线程上运行任务。
+     * 在 Folia 上至关重要，以防止读写方块时发生跨区域访问违规异常。
      */
     public static BukkitTask runForRegion(Plugin plugin, World world, int chunkX, int chunkZ, Runnable task) {
         if (FOLIA) {
@@ -233,15 +232,15 @@ public final class FoliaScheduler {
                 } catch (Throwable ignored) {
                 }
             }
-            // Fallback to global
+            // 回退到全局任务
             return runTimerGlobal(plugin, task, 0L, -1L);
         }
         return Bukkit.getScheduler().runTask(plugin, task);
     }
 
     /**
-     * Runs a repeating global task used by the background cache pool.
-     * Replaces {@code Bukkit.getScheduler().runTaskTimerAsynchronously(...)}.
+     * 运行后台缓存池使用的全局重复任务。
+     * 用于替代 {@code Bukkit.getScheduler().runTaskTimerAsynchronously(...)}。
      */
     public static BukkitTask runTimerGlobal(Plugin plugin, Runnable task, long delay, long period) {
         Object handle = runTimerGlobalTask(plugin, task, delay, period);
@@ -249,8 +248,8 @@ public final class FoliaScheduler {
     }
 
     /**
-     * Schedules a repeating or delayed task and returns the underlying task handle
-     * (BukkitTask on Spigot/Paper, or ScheduledTask on Folia).
+     * 调度周期性或延迟任务并返回底层任务句柄
+     * （在 Spigot/Paper 上为 BukkitTask，在 Folia 上为 ScheduledTask）。
      */
     public static Object runTimerGlobalTask(Plugin plugin, Runnable task, long delay, long period) {
         if (FOLIA) {
@@ -282,7 +281,7 @@ public final class FoliaScheduler {
     }
 
     /**
-     * Cancels any task handle, whether BukkitTask or Folia ScheduledTask.
+     * 取消任意任务句柄（支持 BukkitTask 与 Folia 的 ScheduledTask）。
      */
     public static void cancelTask(Object taskHandle) {
         if (taskHandle == null) return;
@@ -300,8 +299,8 @@ public final class FoliaScheduler {
     }
 
     /**
-     * Runs a pure background task that never touches players or chunks.
-     * Replaces {@code Bukkit.getScheduler().runTaskAsynchronously(...)}.
+     * 运行不接触任何玩家或区块的纯后台异步任务。
+     * 用于替代 {@code Bukkit.getScheduler().runTaskAsynchronously(...)}。
      */
     public static BukkitTask runAsync(Plugin plugin, Runnable task) {
         if (FOLIA) {

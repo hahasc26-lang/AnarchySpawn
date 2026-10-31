@@ -7,11 +7,12 @@ import java.util.regex.Pattern;
 
 public class ColorUtils {
 
-    // Matches &#RRGGBB, #RRGGBB, and <#RRGGBB>
+    // 匹配 &#RRGGBB、#RRGGBB 以及 <#RRGGBB>
     private static final Pattern HEX_PATTERN = Pattern.compile("(?:&#|#|<#)([A-Fa-f0-9]{6})>?");
 
     public static String colorize(String message) {
-        if (message == null || message.isEmpty()) return "";
+        if (message == null || message.isEmpty())
+            return "";
 
         Matcher matcher = HEX_PATTERN.matcher(message);
         StringBuffer sb = new StringBuffer();

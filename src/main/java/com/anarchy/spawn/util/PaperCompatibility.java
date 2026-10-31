@@ -16,8 +16,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Ensures optimal performance on PaperMC (using getChunkAtAsync &
- * teleportAsync) while maintaining 100% Bukkit/Spigot compatibility from 1.12.2 to 1.20+.
+ * 确保在 PaperMC 上具有最佳性能（使用 getChunkAtAsync 与 teleportAsync），
+ * 同时保持从 1.12.2 到 1.20+ 100% 的 Bukkit/Spigot 兼容性。
  */
 public class PaperCompatibility {
 
@@ -53,7 +53,7 @@ public class PaperCompatibility {
         } catch (NoSuchMethodException ignored) {
         }
 
-        // Initialize Sound Aliases (Modern 26.3 / 1.21+ <-> Legacy 1.12.2)
+        // 初始化声音别名（现代 26.3 / 1.21+ <-> 旧版 1.12.2）
         addSoundAlias("ENTITY_ENDERMAN_TELEPORT", "ENDERMAN_TELEPORT");
         addSoundAlias("ENTITY_PLAYER_LEVELUP", "LEVEL_UP");
         addSoundAlias("ENTITY_EXPERIENCE_ORB_PICKUP", "ORB_PICKUP");
@@ -67,7 +67,7 @@ public class PaperCompatibility {
         addSoundAlias("ITEM_WIND_CHARGE_WIND_BURST", "ENTITY_GENERIC_EXPLODE");
         addSoundAlias("BLOCK_CREAKING_HEART_SPAWN", "BLOCK_WOODEN_BUTTON_CLICK_ON");
 
-        // Initialize Particle Aliases (Modern 26.3 / 1.21+ <-> Legacy 1.12.2)
+        // 初始化粒子别名（现代 26.3 / 1.21+ <-> 旧版 1.12.2）
         addParticleAlias("REVERSE_PORTAL", "PORTAL");
         addParticleAlias("SOUL_FIRE_FLAME", "FLAME");
         addParticleAlias("SOUL", "SPELL_MOB");
@@ -96,7 +96,7 @@ public class PaperCompatibility {
     public static Biome getBiomeAt(World world, int x, int y, int z) {
         if (world == null) return null;
 
-        // Try 3D biome lookup (1.16+)
+        // 尝试三维生物群系查找 (1.16+)
         if (getBiome3DMethod != null) {
             try {
                 return (Biome) getBiome3DMethod.invoke(world, x, y, z);
@@ -104,7 +104,7 @@ public class PaperCompatibility {
             }
         }
 
-        // Try 2D biome lookup (1.12.2 - 1.15.2)
+        // 尝试二维生物群系查找 (1.12.2 - 1.15.2)
         if (getBiome2DMethod != null) {
             try {
                 return (Biome) getBiome2DMethod.invoke(world, x, z);
@@ -112,7 +112,7 @@ public class PaperCompatibility {
             }
         }
 
-        // Direct fallback attempt (2D API, deprecated since 1.15)
+        // 直接回退尝试（二维 API，自 1.15 起弃用）
         Biome fallbackBiome = null;
         try {
             fallbackBiome = world.getBiome(x, z);
@@ -146,7 +146,7 @@ public class PaperCompatibility {
             }
         }
 
-        // Fuzzy fallback checks
+        // 模糊匹配回退检查
         if (cleanName.contains("TELEPORT")) {
             for (String fallback : new String[]{"ENTITY_ENDERMAN_TELEPORT", "ENDERMAN_TELEPORT"}) {
                 try {
@@ -189,7 +189,7 @@ public class PaperCompatibility {
             }
         }
 
-        // Default particle fallback
+        // 默认粒子效果回退
         try {
             return Particle.valueOf("PORTAL");
         } catch (IllegalArgumentException ignored) {
@@ -232,8 +232,7 @@ public class PaperCompatibility {
             return fallbackFuture;
         }
 
-        // Chunk access must run on the owning world's region thread (Folia) or the main
-        // thread (Spigot/Paper). FoliaScheduler handles both transparently.
+        // 区块访问必须运行在所属世界的区域线程（Folia）或主线程（Spigot/Paper）上。FoliaScheduler 会透明处理二者。
         FoliaScheduler.runForRegion(AnarchySpawn.getInstance(), world, x, z, () -> {
             try {
                 Chunk chunk = world.getChunkAt(x, z);
@@ -269,9 +268,7 @@ public class PaperCompatibility {
         if (!AnarchySpawn.getInstance().isEnabled()) {
             return CompletableFuture.completedFuture(false);
         }
-        // Teleportation must run on the player's owning region thread (Folia) or the
-        // main
-        // thread (Spigot/Paper). FoliaScheduler handles both transparently.
+        // 传送操作必须运行在玩家归属的区域线程（Folia）或主线程（Spigot/Paper）上。FoliaScheduler 会透明处理二者。
         FoliaScheduler.runForPlayer(AnarchySpawn.getInstance(), player, () -> {
             try {
                 if (player.isOnline()) {
@@ -291,4 +288,3 @@ public class PaperCompatibility {
         return Boolean.TRUE.equals(isPaper);
     }
 }
-

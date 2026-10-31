@@ -61,8 +61,7 @@ public class PlayerRespawnListener implements Listener {
         }
 
         Location cachedLoc = plugin.getCachePool().poll(settings.getWorldName());
-        // Discard a cached point whose world is no longer loaded; otherwise the
-        // respawn would force a synchronous chunk load on the main thread.
+        // 若缓存点所在世界已不再加载则丢弃；否则复活可能导致主线程强制同步加载区块。
         if (cachedLoc != null && (cachedLoc.getWorld() == null
                 || org.bukkit.Bukkit.getWorld(cachedLoc.getWorld().getName()) == null)) {
             cachedLoc = null;
@@ -78,7 +77,7 @@ public class PlayerRespawnListener implements Listener {
                     plugin.getTeleportService().applyPostRespawnEffects(player, finalCachedLoc, settings);
                 }
             }, 1L);
-            // Trigger background refill since we consumed a cached point
+            // 消耗了缓存点，触发后台异步补充
             FoliaScheduler.runAsync(plugin, () -> plugin.getCachePool().refillAllWorlds());
         } else {
             Location fallback = settings.getFallbackLocation(targetWorld);
@@ -87,7 +86,7 @@ public class PlayerRespawnListener implements Listener {
             }
             if (plugin.getConfigManager().isProtectionEnabled()) {
                 try {
-                    player.setNoDamageTicks(60); // 3 seconds interim protection while async search resolves
+                    player.setNoDamageTicks(60); // 异步搜索完成前的临时 3 秒无伤保护
                 } catch (Throwable ignored) {
                 }
             }
@@ -99,7 +98,7 @@ public class PlayerRespawnListener implements Listener {
                     plugin.getTeleportService().teleportToRandomSpawn(player, settings.getWorldName(), false);
                 }
             }, 1L);
-            // Cache is empty, trigger immediate async refill
+            // 缓存池为空，触发立即异步补充
             FoliaScheduler.runAsync(plugin, () -> plugin.getCachePool().refillAllWorlds());
         }
     }

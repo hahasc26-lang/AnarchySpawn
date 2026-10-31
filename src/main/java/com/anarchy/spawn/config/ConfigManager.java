@@ -13,40 +13,40 @@ public class ConfigManager {
     private final AnarchySpawn plugin;
     private FileConfiguration config;
 
-    // General
+    // 通用设置
     private boolean debug;
     private boolean asyncSearch;
     private int maxSearchAttempts;
 
-    // Language
+    // 语言设置
     private String serverLanguage;
     private String clientDefaultLanguage;
     private boolean autoLanguage;
 
-    // First Join
+    // 首次加入
     private boolean firstJoinEnabled;
     private int firstJoinDelayTicks;
     private boolean trackPerWorldPDC;
 
-    // Respawn
+    // 复活设置
     private boolean respawnEnabled;
     private boolean overrideBed;
     private boolean overrideAnchor;
     private boolean respectBypassPermission;
 
-    // Cache Pool
+    // 缓存池
     private boolean cacheEnabled;
     private int cacheTargetSize;
     private int cacheRefillIntervalSeconds;
     private int maxCacheAgeSeconds;
 
-    // Death Hotspots Avoidance
+    // 死亡热点规避
     private boolean deathHotspotEnabled;
     private double deathHotspotRadius;
     private int deathHotspotTtlSeconds;
     private int deathHotspotMaxPerWorld;
 
-    // Spawn Effects
+    // 出生效果
     private boolean protectionEnabled;
     private int invulnerableSeconds;
     private List<String> potionEffects = new ArrayList<>();
@@ -64,7 +64,7 @@ public class ConfigManager {
     private int titleFadeOut;
     private boolean actionbarEnabled;
 
-    // Notifications (Client & Server)
+    // 通知提示（客户端与控制台）
     private boolean clientChatEnabled;
     private boolean clientLocationCardEnabled;
     private boolean clientProtectionMsgEnabled;
@@ -72,12 +72,12 @@ public class ConfigManager {
     private boolean serverLogFirstJoin;
     private boolean serverLogRespawn;
 
-    // Safety Filter
+    // 安全过滤
     private boolean enableSafeSpawnCheck;
     private final Set<Material> unsafeFloorMaterials = EnumSet.noneOf(Material.class);
     private final Set<String> biomeBlacklist = new HashSet<>();
 
-    // Multi-World Settings
+    // 多世界设置
     private final Map<String, WorldSpawnSettings> worldSettings = new HashMap<>();
 
     public ConfigManager(AnarchySpawn plugin) {
@@ -92,42 +92,42 @@ public class ConfigManager {
         plugin.reloadConfig();
         this.config = plugin.getConfig();
 
-        // General
+        // 通用设置
         this.debug = config.getBoolean("general.debug", false);
         this.asyncSearch = config.getBoolean("general.async-search", true);
         this.maxSearchAttempts = Math.max(5, config.getInt("general.max-search-attempts", 50));
 
-        // Language
+        // 语言设置
         this.serverLanguage = config.getString("language.server-language",
                 config.getString("language.default-language", "en_US"));
         this.clientDefaultLanguage = config.getString("language.client-default-language",
                 config.getString("language.default-language", "en_US"));
         this.autoLanguage = config.getBoolean("language.auto-language", true);
 
-        // First Join
+        // 首次加入
         this.firstJoinEnabled = config.getBoolean("first-join.enabled", true);
         this.firstJoinDelayTicks = Math.max(1, config.getInt("first-join.teleport-delay-ticks", 5));
         this.trackPerWorldPDC = config.getBoolean("first-join.track-per-world-pdc", true);
 
-        // Respawn
+        // 复活设置
         this.respawnEnabled = config.getBoolean("respawn.enabled", true);
         this.overrideBed = config.getBoolean("respawn.override-bed", false);
         this.overrideAnchor = config.getBoolean("respawn.override-anchor", false);
         this.respectBypassPermission = config.getBoolean("respawn.respect-bypass-permission", true);
 
-        // Cache Pool
+        // 缓存池
         this.cacheEnabled = config.getBoolean("cache-pool.enabled", true);
         this.cacheTargetSize = Math.max(1, config.getInt("cache-pool.target-size", 25));
         this.cacheRefillIntervalSeconds = Math.max(3, config.getInt("cache-pool.refill-interval-seconds", 10));
         this.maxCacheAgeSeconds = Math.max(60, config.getInt("cache-pool.max-cache-age-seconds", 1800));
 
-        // Death Hotspots Avoidance
+        // 死亡热点规避
         this.deathHotspotEnabled = config.getBoolean("death-hotspots.enabled", true);
         this.deathHotspotRadius = Math.max(0.0, config.getDouble("death-hotspots.radius", 10.0));
         this.deathHotspotTtlSeconds = Math.max(10, config.getInt("death-hotspots.ttl-seconds", 300));
         this.deathHotspotMaxPerWorld = Math.max(5, config.getInt("death-hotspots.max-hotspots-per-world", 50));
 
-        // Spawn Effects
+        // 出生效果
         this.protectionEnabled = config.getBoolean("spawn-effects.protection.enabled", true);
         this.invulnerableSeconds = Math.max(0, config.getInt("spawn-effects.protection.invulnerable-seconds",
                 config.getInt("spawn-effects.invulnerable-seconds", 15)));
@@ -146,7 +146,7 @@ public class ConfigManager {
         this.titleFadeOut = config.getInt("spawn-effects.title.fadeOut", 20);
         this.actionbarEnabled = config.getBoolean("spawn-effects.actionbar.enabled", true);
 
-        // Notifications (Client & Server)
+        // 通知提示（客户端与控制台）
         this.clientChatEnabled = config.getBoolean("notifications.client.chat", true);
         this.clientLocationCardEnabled = config.getBoolean("notifications.client.location-card", true);
         this.clientProtectionMsgEnabled = config.getBoolean("notifications.client.protection", true);
@@ -154,7 +154,7 @@ public class ConfigManager {
         this.serverLogFirstJoin = config.getBoolean("notifications.server.console-log-first-join", true);
         this.serverLogRespawn = config.getBoolean("notifications.server.console-log-respawn", true);
 
-        // Safety Filter Materials (supports both 'enforce-safe-spawn' and legacy 'enable-safe-spawn-check')
+        // 安全过滤材质（同时支持 'enforce-safe-spawn' 与旧版 'enable-safe-spawn-check'）
         this.enableSafeSpawnCheck = config.getBoolean("safety-filter.enforce-safe-spawn",
                 config.getBoolean("safety-filter.enable-safe-spawn-check", true));
 
@@ -168,7 +168,7 @@ public class ConfigManager {
                 }
             } catch (Exception ignored) {}
         }
-        // Always safeguard basic lethal blocks
+        // 始终保护避免生成在基础致命方块上
         this.unsafeFloorMaterials.add(Material.LAVA);
         this.unsafeFloorMaterials.add(Material.FIRE);
         this.unsafeFloorMaterials.add(Material.AIR);
@@ -178,7 +178,7 @@ public class ConfigManager {
             this.unsafeFloorMaterials.add(Material.valueOf("SWEET_BERRY_BUSH"));
         } catch (Exception ignored) {}
 
-        // Biome Blacklist
+        // 群系黑名单
         this.biomeBlacklist.clear();
         for (String biome : config.getStringList("safety-filter.biome-blacklist")) {
             if (biome != null && !biome.trim().isEmpty()) {
@@ -186,7 +186,7 @@ public class ConfigManager {
             }
         }
 
-        // Multi-World Settings
+        // 多世界设置
         this.worldSettings.clear();
         ConfigurationSection worldsSection = config.getConfigurationSection("worlds");
         if (worldsSection != null) {

@@ -8,8 +8,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 /**
- * Listens for player disconnects to clean up active spawn protection tasks
- * and reset invulnerability, preventing combat-log permanent god-mode exploits.
+ * 监听玩家退出事件，用于清理活跃的出生保护任务并重置无敌状态，
+ * 防止利用登出漏洞卡永久无敌。
  */
 public class PlayerQuitListener implements Listener {
 

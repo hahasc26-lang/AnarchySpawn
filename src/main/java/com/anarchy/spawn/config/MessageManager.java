@@ -37,12 +37,12 @@ public class MessageManager {
             langFolder.mkdirs();
         }
 
-        // Save bundled default language files if not present
+        // 若语言文件不存在则释放默认语言文件
         saveDefaultLanguageFile("zh_CN.yml");
         saveDefaultLanguageFile("zh_TW.yml");
         saveDefaultLanguageFile("en_US.yml");
 
-        // Load all .yml files in languages directory
+        // 加载 languages 目录下的所有 .yml 文件
         File[] files = langFolder.listFiles((dir, name) -> name.toLowerCase(Locale.ROOT).endsWith(".yml"));
         if (files != null) {
             for (File file : files) {
@@ -94,7 +94,7 @@ public class MessageManager {
             try {
                 plugin.saveResource("languages/" + resourceName, false);
             } catch (Exception e) {
-                // If saveResource fails, try copying stream manually
+                // 若 saveResource 失败，则尝试手动复制输入流
                 try (InputStream in = plugin.getResource("languages/" + resourceName)) {
                     if (in != null) {
                         YamlConfiguration cfg = YamlConfiguration
@@ -115,12 +115,12 @@ public class MessageManager {
                 if (playerLocale != null && !playerLocale.isEmpty()) {
                     String normLocale = playerLocale.toLowerCase(Locale.ROOT).replace("-", "_");
 
-                    // Exact match (e.g. "zh_tw", "zh_cn", "en_us")
+                    // 精确匹配（例如 "zh_tw", "zh_cn", "en_us"）
                     if (languages.containsKey(normLocale)) {
                         return languages.get(normLocale);
                     }
 
-                    // Dialect & Region mapping
+                    // 方言与地区映射
                     if (normLocale.contains("tw") || normLocale.contains("hk") || normLocale.contains("mo")
                             || normLocale.contains("hant")) {
                         if (languages.containsKey("zh_tw")) {
@@ -139,7 +139,7 @@ public class MessageManager {
                         }
                     }
 
-                    // Generic 2-letter fallback (e.g. "en", "zh")
+                    // 通用双字母回退（例如 "en", "zh"）
                     String langPrefix = normLocale.contains("_") ? normLocale.split("_")[0] : normLocale;
                     for (Map.Entry<String, FileConfiguration> entry : languages.entrySet()) {
                         if (entry.getKey().startsWith(langPrefix)) {
@@ -368,8 +368,7 @@ public class MessageManager {
             return defaultMessages.getString(path);
         }
 
-        // Format neatly like PLAINS -> Plains, OLD_GROWTH_BIRCH_FOREST -> Old Growth
-        // Birch Forest
+        // 格式化展示，例如 PLAINS -> Plains, OLD_GROWTH_BIRCH_FOREST -> Old Growth Birch Forest
         String[] words = clean.split("_");
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < words.length; i++) {

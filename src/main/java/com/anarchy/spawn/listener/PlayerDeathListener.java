@@ -8,8 +8,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 
 /**
- * Listens for player death events to dynamically record death hotspot coordinates
- * for spawn avoidance filtering.
+ * 监听玩家死亡事件，动态记录死亡热点坐标以便在随机出生时进行规避过滤。
  */
 public class PlayerDeathListener implements Listener {
 

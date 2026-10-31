@@ -13,9 +13,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Dual-track persistence utility:
- * - On Minecraft 1.14+ (Paper/Spigot/Folia): Uses native PersistentDataContainer (PDC) directly on Player entities.
- * - On legacy Minecraft 1.12.2 - 1.13.2: Automatically falls back to a thread-safe local file storage (data/players.yml).
+ * 双轨持久化工具类：
+ * - 在 Minecraft 1.14+ (Paper/Spigot/Folia) 上：直接在玩家实体上使用原生的 PersistentDataContainer (PDC)。
+ * - 在旧版本 Minecraft 1.12.2 - 1.13.2 上：自动回退到线程安全的本地文件存储 (data/players.yml)。
  */
 public class PDCUtils {
 
@@ -136,9 +136,8 @@ public class PDCUtils {
     }
 
     /**
-     * Isolated native PDC handler.
-     * Only loaded by JVM on 1.14+ runtimes, completely insulating 1.12.2 - 1.13.2 JVMs
-     * from NoClassDefFoundError on PersistentDataContainer.
+     * 隔离的原生 PDC 处理器。
+     * 仅在 1.14+ 运行时的 JVM 中加载，完全避免在 1.12.2 - 1.13.2 的 JVM 上抛出 PersistentDataContainer 的 NoClassDefFoundError。
      */
     private static class PdcNativeHandler {
         private static final Map<String, NamespacedKey> KEY_CACHE = new ConcurrentHashMap<>();

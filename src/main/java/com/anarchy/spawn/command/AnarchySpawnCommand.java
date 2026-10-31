@@ -177,7 +177,7 @@ public class AnarchySpawnCommand implements CommandExecutor {
             plugin.getConfig().set("worlds." + settings.getWorldName() + ".center.z", z);
             plugin.saveConfig();
 
-            // Invalidate existing cached points for this world and trigger refill
+            // 使该世界现有的缓存点失效并触发重新补充
             plugin.getCachePool().clearWorldCache(settings.getWorldName());
             FoliaScheduler.runAsync(plugin, () -> plugin.getCachePool().refillAllWorlds());
 

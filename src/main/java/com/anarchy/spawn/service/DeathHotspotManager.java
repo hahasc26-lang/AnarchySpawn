@@ -9,9 +9,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * Manages dynamic death and combat hotspot locations per world.
- * Automatically avoids placing respawning or newly spawning players
- * near recent PvP/death traps or bed-camping hotspot zones.
+ * 管理各世界动态死亡和战斗热点坐标。
+ * 自动避免将复活或新出生的玩家生成在近期 PvP/死亡陷阱或堵床蹲点热点区域附近。
  */
 public class DeathHotspotManager {
 
@@ -23,9 +22,9 @@ public class DeathHotspotManager {
     }
 
     /**
-     * Records a new death location if death hotspot avoidance is enabled.
+     * 若启用了死亡热点规避，则记录新的死亡位置。
      *
-     * @param location Death location
+     * @param location 死亡位置
      */
     public void recordDeath(Location location) {
         if (location == null || location.getWorld() == null) {
@@ -43,10 +42,10 @@ public class DeathHotspotManager {
         long ttlMillis = plugin.getConfigManager().getDeathHotspotTtlSeconds() * 1000L;
         int maxHotspots = plugin.getConfigManager().getDeathHotspotMaxPerWorld();
 
-        // Remove expired hotspots
+        // 移除已过期的热点
         queue.removeIf(h -> (now - h.getTimestamp()) > ttlMillis);
 
-        // If an existing hotspot is close (< 5 blocks), refresh timestamp instead of flooding queue
+        // 若已有热点非常接近（< 5 格），则刷新其时间戳而非重复塞入队列
         for (Hotspot h : queue) {
             double dx = location.getX() - h.getX();
             double dz = location.getZ() - h.getZ();
@@ -56,7 +55,7 @@ public class DeathHotspotManager {
             }
         }
 
-        // Keep size within limit
+        // 保持队列大小在上限以内
         while (queue.size() >= maxHotspots) {
             queue.poll();
         }
@@ -71,13 +70,12 @@ public class DeathHotspotManager {
     }
 
     /**
-     * Checks if the given X, Z coordinate in a world is within the blacklisted radius
-     * of any active death hotspot.
+     * 检查某个世界中的指定 X、Z 坐标是否处于任何活跃死亡热点的黑名单半径之内。
      *
-     * @param worldName World name
-     * @param x X coordinate
-     * @param z Z coordinate
-     * @return true if coordinate is inside a death hotspot zone, false otherwise
+     * @param worldName 世界名称
+     * @param x X 坐标
+     * @param z Z 坐标
+     * @return 若坐标位于死亡热点区域内则返回 true，否则返回 false
      */
     public boolean isNearHotspot(String worldName, double x, double z) {
         if (worldName == null || !plugin.getConfigManager().isDeathHotspotEnabled()) {
@@ -110,7 +108,7 @@ public class DeathHotspotManager {
     }
 
     /**
-     * Returns the count of active (non-expired) hotspots for a specified world.
+     * 获取指定世界中活跃（未过期）的热点数量。
      */
     public int getActiveHotspotsCount(String worldName) {
         if (worldName == null) return 0;
@@ -123,14 +121,14 @@ public class DeathHotspotManager {
     }
 
     /**
-     * Clears all recorded hotspots for all worlds.
+     * 清空所有世界记录的死亡热点。
      */
     public void clearAllHotspots() {
         hotspotsByWorld.clear();
     }
 
     /**
-     * Data holder for a single death hotspot location and time.
+     * 单个死亡热点位置及时间戳的数据包装类。
      */
     public static class Hotspot {
         private final double x;

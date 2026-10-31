@@ -104,7 +104,7 @@ public final class SafetyValidator {
         try {
             return mat.isBlock();
         } catch (NoSuchMethodError | Exception e) {
-            // 1.12.2 fallback where Material#isBlock() does not exist
+            // 1.12.2 回退逻辑（此版本不存在 Material#isBlock()）
             return mat.isSolid() || mat.name().contains("AIR") || mat.name().contains("WATER") || mat.name().contains("LAVA");
         }
     }
@@ -114,7 +114,7 @@ public final class SafetyValidator {
         try {
             return mat.isAir();
         } catch (NoSuchMethodError | Exception e) {
-            // 1.12.2 & 1.13 fallback where Material#isAir() does not exist
+            // 1.12.2 与 1.13 回退逻辑（这些版本不存在 Material#isAir()）
             return mat == Material.AIR || mat.name().endsWith("AIR");
         }
     }
@@ -132,7 +132,7 @@ public final class SafetyValidator {
                 floorSet.addAll(((Tag<Material>) walls).getValues());
             }
         } catch (Throwable ignored) {
-            // 1.12.2 fallback where org.bukkit.Tag does not exist
+            // 1.12.2 回退逻辑（此版本不存在 org.bukkit.Tag）
             for (Material mat : Material.values()) {
                 String name = mat.name();
                 if (name.contains("FENCE") || name.contains("WALL")) {
