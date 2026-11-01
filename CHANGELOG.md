@@ -7,7 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 > 中文版请见 [CHANGELOG_Chinese.md](CHANGELOG_Chinese.md).
 
-## [1.1.2] - 2026-10-31
+## [1.1.2] - 2026-11-01
+
+### Added
+- **Modrinth-Powered In-Game Auto Updater (`ModrinthAutoUpdater`)**:
+  - Automatically queries the official Modrinth API v2 (`/project/{slug}/version`) on startup and on configurable periodic schedules (default: every 6 hours).
+  - Automatically matches server loaders (`bukkit`, `spigot`, `paper`, `purpur`, `folia`) and respects configured release channels (`release`, `beta`, `alpha`, default: `release`).
+  - Downloads new releases into the server's update directory (`plugins/update/`) preserving the current jar's exact filename for automatic, seamless replacement on the next server restart.
+  - Implements mandatory **SHA-512 cryptographic verification** against Modrinth API metadata, safely discarding corrupted or incomplete downloads (`.part` staging).
+  - Lightweight, non-blocking single-daemon execution thread pool: 100% thread-safe on Paper and Folia without blocking the main tick loop or regional threads.
+- **Admin In-Game Command & Join Notifications**:
+  - Added `/as update [check]` command (with Tab completion): allows server administrators to manually trigger an immediate update check and background download, or run `check` for read-only version comparison.
+  - Added `anarchyspawn.update` permission node (granted to OP and included in `anarchyspawn.admin`).
+  - Added `UpdateNotifyListener`: displays non-intrusive update reminders or restart notices to administrators upon joining the server.
+- **Full Multi-Language Localization for Updater & Messages**:
+  - All console logs and in-game messages for the updater are fully localized in `en_US.yml`, `zh_CN.yml`, and `zh_TW.yml`.
+  - Console logs automatically honor `language.server-language` with stripped color codes, while in-game notices honor client locale auto-detection.
+  - Added fallback defaults loading in `MessageManager` so existing user language files missing newly added keys gracefully fall back to bundled defaults without breaking formatting.
+
+
 
 ### Fixed
 

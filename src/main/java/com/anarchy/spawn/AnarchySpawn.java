@@ -11,16 +11,19 @@ import com.anarchy.spawn.listener.PlayerJoinListener;
 import com.anarchy.spawn.listener.PlayerQuitListener;
 import com.anarchy.spawn.listener.PlayerRespawnListener;
 import com.anarchy.spawn.listener.PlayerWorldChangeListener;
+import com.anarchy.spawn.listener.UpdateNotifyListener;
 import com.anarchy.spawn.service.DeathHotspotManager;
 import com.anarchy.spawn.service.LocationCachePool;
 import com.anarchy.spawn.service.SafeLocationFinder;
 import com.anarchy.spawn.service.TeleportService;
 import com.anarchy.spawn.util.FoliaScheduler;
+import com.anarchy.spawn.util.ModrinthAutoUpdater;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
 import java.util.Objects;
 import java.util.logging.Level;
 
@@ -84,6 +87,11 @@ public final class AnarchySpawn extends JavaPlugin {
      */
     private DeathHotspotManager deathHotspotManager;
 
+    /**
+     * Modrinth 自动更新服务（检查、下载、SHA-512 校验）
+     */
+    private ModrinthAutoUpdater autoUpdater;
+
     // ==========================================
     // 第三方插件软依赖状态标识
     // ==========================================
@@ -141,6 +149,10 @@ public final class AnarchySpawn extends JavaPlugin {
         // 6. 探测并连接第三方软依赖（PAPI、EssentialsX 等）
         registerHooks();
 
+        // 7. 启动 Modrinth 自动更新检查（全程异步，不阻塞启动）
+        this.autoUpdater = new ModrinthAutoUpdater(this);
+        this.autoUpdater.start(true);
+
         // 统计启动耗时
         long timeTaken = System.currentTimeMillis() - startTime;
         getLogger().info("AnarchySpawn successfully enabled in " + timeTaken + "ms!");
@@ -154,6 +166,11 @@ public final class AnarchySpawn extends JavaPlugin {
     @Override
     public void onDisable() {
         getLogger().info("Disabling AnarchySpawn...");
+
+        // 停止自动更新定时任务与网络线程
+        if (autoUpdater != null) {
+            autoUpdater.shutdown();
+        }
 
         // 终止位置缓冲池的异步线程与定时任务，排空等待队列
         if (cachePool != null) {
@@ -195,6 +212,8 @@ public final class AnarchySpawn extends JavaPlugin {
         pm.registerEvents(new PlayerDeathListener(this), this);
         // 玩家离线清理（移除非法缓存与保护计时器）
         pm.registerEvents(new PlayerQuitListener(this), this);
+        // 管理员进服新版本提示
+        pm.registerEvents(new UpdateNotifyListener(this), this);
     }
 
     /**
@@ -254,6 +273,10 @@ public final class AnarchySpawn extends JavaPlugin {
         // 重置所有历史死亡热点
         if (deathHotspotManager != null) {
             deathHotspotManager.clearAllHotspots();
+        }
+        // 按新配置重新调度自动更新定时任务（重载时不立即检查）
+        if (autoUpdater != null) {
+            autoUpdater.start(false);
         }
         getLogger().info("AnarchySpawn configuration and cache pool reloaded.");
     }
@@ -324,6 +347,24 @@ public final class AnarchySpawn extends JavaPlugin {
      */
     public DeathHotspotManager getDeathHotspotManager() {
         return deathHotspotManager;
+    }
+
+    /**
+     * 获取 Modrinth 自动更新服务
+     *
+     * @return {@link ModrinthAutoUpdater}
+     */
+    public ModrinthAutoUpdater getAutoUpdater() {
+        return autoUpdater;
+    }
+
+    /**
+     * 获取当前运行中的插件 jar 文件（用于让更新文件与原 jar 同名，以便服务端重启时自动替换）
+     *
+     * @return 插件 jar 文件
+     */
+    public File getPluginJarFile() {
+        return getFile();
     }
 
     /**

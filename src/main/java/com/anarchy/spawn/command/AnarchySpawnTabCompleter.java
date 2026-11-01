@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 public class AnarchySpawnTabCompleter implements TabCompleter {
 
     private final AnarchySpawn plugin;
-    private final List<String> subCommands = Arrays.asList("reload", "tp", "setcenter", "info", "test", "cache");
+    private final List<String> subCommands = Arrays.asList("reload", "tp", "setcenter", "info", "test", "cache", "update");
 
     public AnarchySpawnTabCompleter(AnarchySpawn plugin) {
         this.plugin = plugin;
@@ -36,7 +36,11 @@ public class AnarchySpawnTabCompleter implements TabCompleter {
 
         if (args.length == 2) {
             String sub = args[0].toLowerCase();
-            if (sub.equals("tp") && (sender.hasPermission("anarchyspawn.tp") || sender.hasPermission("anarchyspawn.admin"))) {
+            if (sub.equals("update") && (sender.hasPermission("anarchyspawn.update") || sender.hasPermission("anarchyspawn.admin"))) {
+                if ("check".startsWith(args[1].toLowerCase())) {
+                    completions.add("check");
+                }
+            } else if (sub.equals("tp") && (sender.hasPermission("anarchyspawn.tp") || sender.hasPermission("anarchyspawn.admin"))) {
                 for (Player p : Bukkit.getOnlinePlayers()) {
                     if (p.getName().toLowerCase().startsWith(args[1].toLowerCase())) {
                         completions.add(p.getName());

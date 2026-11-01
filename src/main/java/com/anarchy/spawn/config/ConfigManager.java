@@ -80,6 +80,16 @@ public class ConfigManager {
     // 多世界设置
     private final Map<String, WorldSpawnSettings> worldSettings = new HashMap<>();
 
+    // 自动更新（Modrinth）
+    private boolean updaterEnabled;
+    private String updaterProjectId;
+    private boolean updaterCheckOnStartup;
+    private int updaterCheckIntervalHours;
+    private boolean updaterAutoDownload;
+    private boolean updaterVerifySha512;
+    private boolean updaterNotifyOnJoin;
+    private final Set<String> updaterChannels = new LinkedHashSet<>();
+
     public ConfigManager(AnarchySpawn plugin) {
         this.plugin = plugin;
     }
@@ -199,6 +209,27 @@ public class ConfigManager {
             }
         }
 
+        // 自动更新（Modrinth）
+        this.updaterEnabled = config.getBoolean("auto-updater.enabled", true);
+        String projectId = config.getString("auto-updater.project-id", "anarchyspawn");
+        this.updaterProjectId = (projectId == null || projectId.trim().isEmpty()) ? "anarchyspawn" : projectId.trim();
+        this.updaterCheckOnStartup = config.getBoolean("auto-updater.check-on-startup", true);
+        this.updaterCheckIntervalHours = Math.max(0, config.getInt("auto-updater.check-interval-hours", 6));
+        this.updaterAutoDownload = config.getBoolean("auto-updater.auto-download", true);
+        this.updaterVerifySha512 = config.getBoolean("auto-updater.verify-sha512", true);
+        this.updaterNotifyOnJoin = config.getBoolean("auto-updater.notify-admins-on-join", true);
+        this.updaterChannels.clear();
+        for (String channel : config.getStringList("auto-updater.channels")) {
+            if (channel == null) continue;
+            String c = channel.trim().toLowerCase(Locale.ROOT);
+            if (c.equals("release") || c.equals("beta") || c.equals("alpha")) {
+                this.updaterChannels.add(c);
+            }
+        }
+        if (this.updaterChannels.isEmpty()) {
+            this.updaterChannels.add("release");
+        }
+
         if (debug) {
             plugin.getLogger().info("Config loaded: " + worldSettings.size() + " active worlds configured.");
         }
@@ -266,4 +297,12 @@ public class ConfigManager {
     public boolean isEnableSafeSpawnCheck() { return enableSafeSpawnCheck; }
     public Set<Material> getUnsafeFloorMaterials() { return unsafeFloorMaterials; }
     public Set<String> getBiomeBlacklist() { return biomeBlacklist; }
+    public boolean isUpdaterEnabled() { return updaterEnabled; }
+    public String getUpdaterProjectId() { return updaterProjectId != null ? updaterProjectId : "anarchyspawn"; }
+    public boolean isUpdaterCheckOnStartup() { return updaterCheckOnStartup; }
+    public int getUpdaterCheckIntervalHours() { return updaterCheckIntervalHours; }
+    public boolean isUpdaterAutoDownload() { return updaterAutoDownload; }
+    public boolean isUpdaterVerifySha512() { return updaterVerifySha512; }
+    public boolean isUpdaterNotifyOnJoin() { return updaterNotifyOnJoin; }
+    public Set<String> getUpdaterChannels() { return Collections.unmodifiableSet(updaterChannels); }
 }

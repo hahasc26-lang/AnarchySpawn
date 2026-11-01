@@ -3,6 +3,7 @@ package com.anarchy.spawn.command;
 import com.anarchy.spawn.AnarchySpawn;
 import com.anarchy.spawn.config.WorldSpawnSettings;
 import com.anarchy.spawn.util.FoliaScheduler;
+import com.anarchy.spawn.util.ModrinthAutoUpdater;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -48,6 +49,7 @@ public class AnarchySpawnCommand implements CommandExecutor {
             case "info", "status" -> handleInfo(sender);
             case "test", "benchmark" -> handleTest(sender, args);
             case "cache", "refill" -> handleCache(sender);
+            case "update", "upgrade" -> handleUpdate(sender, args);
             default -> sendHelp(sender, label);
         }
 
@@ -295,6 +297,26 @@ public class AnarchySpawnCommand implements CommandExecutor {
         plugin.getMessageManager().sendMessage(sender, "command.info-cache-refreshed", null);
     }
 
+    /**
+     * /as update        - 检查并下载最新版本
+     * /as update check  - 仅检查，不下载
+     */
+    private void handleUpdate(CommandSender sender, String[] args) {
+        if (!hasSubPermission(sender, "anarchyspawn.update")) {
+            plugin.getMessageManager().sendMessage(sender, "command.no-permission", null);
+            return;
+        }
+
+        ModrinthAutoUpdater updater = plugin.getAutoUpdater();
+        if (updater == null) {
+            return;
+        }
+
+        boolean download = !(args.length >= 2 && args[1].equalsIgnoreCase("check"));
+        // 所有反馈通过 sendFeedback 投递回执行者所在线程（兼容 Folia）
+        updater.checkAsync(download, (level, path, placeholders) -> sendFeedback(sender, path, placeholders));
+    }
+
     private void sendHelp(CommandSender sender, String label) {
         Map<String, String> p = Map.of("label", label);
         String[] nodes = {
@@ -304,7 +326,8 @@ public class AnarchySpawnCommand implements CommandExecutor {
                 "command.help-setcenter",
                 "command.help-info",
                 "command.help-test",
-                "command.help-cache"
+                "command.help-cache",
+                "command.help-update"
         };
 
         for (String node : nodes) {

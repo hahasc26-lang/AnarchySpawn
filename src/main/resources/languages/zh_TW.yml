@@ -87,6 +87,31 @@ command:
   help-info: "&e/{label} info &7- 查看所有世界的設定與預存位置數量"
   help-test: "&e/{label} test [世界] &7- 測試座標搜尋速度與成功率"
   help-cache: "&e/{label} cache &7- 立即重新補充預存出生點"
+  help-update: "&e/{label} update [check] &7- 從 Modrinth 檢查更新並下載最新版本"
+
+# 自動更新 (Modrinth)
+# 佔位符: {current}, {latest}, {channel}, {channels}, {project}, {url}, {path}, {code}, {error}
+updater:
+  checking: "&#AAAAAA正在檢查 Modrinth 最新版本..."
+  already-checking: "&#FFAA00已有更新檢查正在進行中，請稍候..."
+  up-to-date: "&#55FF55目前已是最新版本 &f(v{current})&#55FF55。"
+  update-available: "&#FFAA00發現新版本: &#55FF55v{latest} &7({channel}) &#FFAA00| 目前版本: &#FF5555v{current}"
+  download-hint: "&#AAAAAA下載網址: &f{url} &7(或執行 &e/as update&7)"
+  downloading: "&#AAAAAA正在背景下載 v{latest}..."
+  download-success: "&#55FF55v{latest} 已下載至 &f{path}&#55FF55，重新啟動伺服器後生效。"
+  already-downloaded: "&#55FF55v{latest} 已下載完成，重新啟動伺服器後生效。"
+  hash-mismatch: "&#FF5555v{latest} 的 SHA-512 校驗失敗，已捨棄該檔案。"
+  download-failed: "&#FF5555下載更新失敗: &f{error}"
+  http-error: "&#FF5555Modrinth API 請求失敗 (HTTP {code})。"
+  check-failed: "&#FF5555檢查更新失敗: &f{error}"
+  no-version-found: "&#FF5555未在 Modrinth 專案 &f{project}&#FF5555 中找到有效版本 (頻道: {channels})。"
+  # 擁有 'anarchyspawn.update' 權限的玩家進服時提示 (多行列表，設為 [] 可停用)
+  join-notify:
+    - "[prefix]&#FFAA00發現新版本: &#55FF55v{latest} &7(目前: v{current})"
+    - "[prefix]&7執行 &e/as update &7下載，或前往 &f{url}"
+  join-notify-downloaded:
+    - "[prefix]&#55FF55v{latest} &#FFAA00已下載完成 &7(目前: v{current})"
+    - "[prefix]&7重新啟動伺服器後即可生效。"
 
 # 生物群系本地化名稱對照
 biomes:

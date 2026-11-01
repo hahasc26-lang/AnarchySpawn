@@ -262,3 +262,42 @@ death-hotspots:
   # Maximum number of active hotspots tracked per world
   max-hotspots-per-world: 50
 
+# ============================================================================== #
+#             AutoUpdater Settings (Modrinth)                                    #
+# Checks https://modrinth.com/plugin/anarchyspawn for new versions. Downloaded   #
+# updates are saved to the server's update folder (default: plugins/update/)     #
+# using the SAME file name as the current jar, so the server replaces it         #
+# automatically on the next restart.                                             #
+# ============================================================================== #
+auto-updater:
+  # Master switch for update checking
+  enabled: true
+
+  # Modrinth project slug or ID
+  project-id: "anarchyspawn"
+
+  # Check for updates when the plugin starts
+  check-on-startup: true
+
+  # Periodic check interval in hours (0 = disable periodic checks)
+  check-interval-hours: 6
+
+  # Automatically download new versions into the update folder (takes effect after restart)
+  # If false, only a notification with the download link will be shown
+  auto-download: true
+
+  # Verify the downloaded file with the SHA-512 hash provided by Modrinth (discard on mismatch)
+  verify-sha512: true
+
+  # Accepted release channels: release, beta, alpha
+  channels:
+    - "release"
+
+  # Notify players with 'anarchyspawn.update' (or 'anarchyspawn.admin') when they join
+  notify-admins-on-join: true
+
+# ============================================================================== #
+#                                 End of Config                                  #
+# ============================================================================== #
+
+

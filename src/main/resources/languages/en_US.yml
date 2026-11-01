@@ -87,6 +87,31 @@ command:
   help-info: "&e/{label} info &7- View status of all worlds and cached spawn pools"
   help-test: "&e/{label} test [world] &7- Benchmark location search algorithm speed"
   help-cache: "&e/{label} cache &7- Refill pre-cached safe spawn pools immediately"
+  help-update: "&e/{label} update [check] &7- Check Modrinth for updates and download the latest version"
+
+# Auto Updater (Modrinth)
+# Placeholders: {current}, {latest}, {channel}, {channels}, {project}, {url}, {path}, {code}, {error}
+updater:
+  checking: "&#AAAAAAChecking Modrinth for the latest version..."
+  already-checking: "&#FFAA00An update check is already in progress, please wait..."
+  up-to-date: "&#55FF55You are running the latest version &f(v{current})&#55FF55."
+  update-available: "&#FFAA00New version available: &#55FF55v{latest} &7({channel}) &#FFAA00| Current: &#FF5555v{current}"
+  download-hint: "&#AAAAAADownload: &f{url} &7(or run &e/as update&7)"
+  downloading: "&#AAAAAADownloading v{latest} in the background..."
+  download-success: "&#55FF55v{latest} downloaded to &f{path}&#55FF55. Restart the server to apply the update."
+  already-downloaded: "&#55FF55v{latest} has already been downloaded. Restart the server to apply the update."
+  hash-mismatch: "&#FF5555SHA-512 verification failed for v{latest}. The file was discarded."
+  download-failed: "&#FF5555Failed to download the update: &f{error}"
+  http-error: "&#FF5555Modrinth API request failed (HTTP {code})."
+  check-failed: "&#FF5555Update check failed: &f{error}"
+  no-version-found: "&#FF5555No valid version found on Modrinth for project &f{project}&#FF5555 (channels: {channels})."
+  # Sent to players with 'anarchyspawn.update' on join (multi-line list, set to [] to disable)
+  join-notify:
+    - "[prefix]&#FFAA00A new version is available: &#55FF55v{latest} &7(current: v{current})"
+    - "[prefix]&7Run &e/as update &7to download it, or visit &f{url}"
+  join-notify-downloaded:
+    - "[prefix]&#55FF55v{latest} &#FFAA00has been downloaded &7(current: v{current})"
+    - "[prefix]&7Restart the server to apply the update."
 
 # Biome names dictionary
 biomes:

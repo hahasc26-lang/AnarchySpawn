@@ -67,6 +67,7 @@
 - **Folia Regionized Scheduler Support**: Auto-detects Folia region threads with transparent fallback to classic scheduler on Paper/Spigot.
 - **Audiovisual & Anti-Instakill Protection**: Configurable invulnerability duration, potion effects (Resistance, Slow Falling, Fire Resistance), particle effects, sounds, titles, and actionbars.
 - **Ecosystem Integration**: Built-in soft dependency support for PlaceholderAPI and EssentialsX.
+- **Modrinth Auto-Updater & Safe Download**: Background checking on startup and periodic timers, SHA-512 verification, seamless `plugins/update/` replacement on restart, and in-game admin notifications.
 
 ---
 
@@ -94,6 +95,7 @@
 | `/as info` | `/as status` | `anarchyspawn.info` | OP | Displays enabled world statuses and cache pool capacity |
 | `/as test [world]` | `/as benchmark` | `anarchyspawn.test` | OP | Runs a single safe coordinate search benchmark with timing |
 | `/as cache` | `/as refill` | `anarchyspawn.cache` | OP | Wakes up background async workers to refill the pre-cache pool |
+| `/as update [check]` | `/as upgrade` | `anarchyspawn.update` | OP | Checks Modrinth for updates and downloads the latest version (`check` for check-only) |
 
 </details>
 
@@ -113,6 +115,7 @@
 | `anarchyspawn.info` | OP | Allows execution of `/as info` |
 | `anarchyspawn.test` | OP | Allows execution of `/as test` |
 | `anarchyspawn.cache` | OP | Allows execution of `/as cache` |
+| `anarchyspawn.update` | OP | Allows execution of `/as update` and receiving update notifications on join |
 
 </details>
 
@@ -211,6 +214,7 @@
 - **Folia 区域化调度器支持**：自动适配 Folia 区域线程调度，并在 Paper/Spigot 环境透明回退。
 - **完整视听与防秒杀增益**：支持无敌时间、药水效果（抗性提升、缓慢下落、防火等）、音效、粒子、Title 与 Actionbar。
 - **生态无缝对接**：支持 PlaceholderAPI 与 EssentialsX 软依赖拓展。
+- **Modrinth 自动更新与安全静默下载**：开服及定时后台异步检测更新，自动比对官方 SHA-512 哈希，下载至 `plugins/update/` 并保持同名以实现重启无感替换，支持管理员进服多语言提示。
 
 ---
 
@@ -238,6 +242,7 @@
 | `/as info` | `/as status` | `anarchyspawn.info` | OP | 查看所有启用世界的运行状态与缓存池余量 |
 | `/as test [世界]` | `/as benchmark` | `anarchyspawn.test` | OP | 运行单次安全坐标搜索算法基准测试与耗时统计 |
 | `/as cache` | `/as refill` | `anarchyspawn.cache` | OP | 立即唤醒后台异步线程补满预缓存池 |
+| `/as update [check]` | `/as upgrade` | `anarchyspawn.update` | OP | 从 Modrinth 检查并下载最新版本（附带 `check` 参数仅检查不下载） |
 
 </details>
 
@@ -257,6 +262,7 @@
 | `anarchyspawn.info` | OP | 允许查看插件世界状态与缓存池余量 `/as info` |
 | `anarchyspawn.test` | OP | 允许执行算法性能基准测试 `/as test` |
 | `anarchyspawn.cache` | OP | 允许强制补充预热缓存池 `/as cache` |
+| `anarchyspawn.update` | OP | 允许执行更新指令 `/as update` 并在进服时接收新版本通知 |
 
 </details>
 

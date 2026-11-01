@@ -50,6 +50,14 @@ public class MessageManager {
                 String langKey = fileName.substring(0, fileName.length() - 4).toLowerCase(Locale.ROOT);
                 try {
                     YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
+                    // 以 jar 内置语言文件作为默认值，旧版语言文件缺失的新键（如 updater.*）会自动回退
+                    YamlConfiguration bundled = loadBundledLanguage(fileName);
+                    if (bundled == null) {
+                        bundled = loadBundledLanguage("en_US.yml");
+                    }
+                    if (bundled != null) {
+                        cfg.setDefaults(bundled);
+                    }
                     languages.put(langKey, cfg);
                 } catch (Exception e) {
                     plugin.getLogger()
@@ -86,6 +94,20 @@ public class MessageManager {
         this.defaultMessages = this.serverMessages;
         this.defaultPrefix = ColorUtils
                 .colorize(serverMessages.getString("prefix", "&#FF5555&l[&#FFAA00AnarchySpawn&#FF5555&l] &r"));
+    }
+
+    /**
+     * 读取 jar 内置的语言文件（不存在时返回 null）
+     */
+    private YamlConfiguration loadBundledLanguage(String fileName) {
+        try (InputStream in = plugin.getResource("languages/" + fileName)) {
+            if (in == null) {
+                return null;
+            }
+            return YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private void saveDefaultLanguageFile(String resourceName) {
