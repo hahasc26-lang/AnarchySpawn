@@ -25,8 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Console logs automatically honor `language.server-language` with stripped color codes, while in-game notices honor client locale auto-detection.
   - Added fallback defaults loading in `MessageManager` so existing user language files missing newly added keys gracefully fall back to bundled defaults without breaking formatting.
 
-
-
 ### Fixed
 
 - **Refactored Command Execution Layer**: Resolved Folia cross-region thread-safety issues, streamlined placeholder mappings to reduce GC pressure, and strengthened coordinate boundary validation alongside console fallback handling.
