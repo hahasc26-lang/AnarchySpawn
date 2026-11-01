@@ -7,6 +7,13 @@
 
 > English version: [CHANGELOG.md](CHANGELOG.md).
 
+## [1.1.3] - 2026-11-01
+
+### 变更
+- **自动更新目标文件名优化 (`ModrinthAutoUpdater`)**：
+  - 自动更新下载文件现使用 Modrinth 发布的版本原文件名（如 `AnarchySpawn-1.1.3.jar`）保存至 `plugins/update/`，清晰直观地展示更新文件的新版本号与包名。
+  - 自动更新提示中新增 `{filename}` 占位符支持。
+
 ## [1.1.2] - 2026-11-01
 
 ### 新增

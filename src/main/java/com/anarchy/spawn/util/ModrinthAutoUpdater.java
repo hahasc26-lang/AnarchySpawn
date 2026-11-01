@@ -105,7 +105,8 @@ public final class ModrinthAutoUpdater {
                 Method getVersion = meta.getClass().getMethod("getVersion");
                 return (String) getVersion.invoke(meta);
             }
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
         // 1.12.2 ~ 旧版通用接口
         return plugin.getDescription().getVersion();
     }
@@ -346,6 +347,7 @@ public final class ModrinthAutoUpdater {
             throw new IOException("Unable to create update folder: " + updateFolder.getPath());
         }
 
+        // 调用 resolveRunningJarFile() 确定当前插件 Jar 文件名，实现重启后由服务端自动替换
         String targetName = resolveRunningJarFile().getName();
         File target = new File(updateFolder, targetName);
         File temp = new File(updateFolder, targetName + ".part");
@@ -376,7 +378,8 @@ public final class ModrinthAutoUpdater {
         }
 
         try {
-            Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE);
         } catch (Throwable atomicFallback) {
             Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
@@ -396,7 +399,8 @@ public final class ModrinthAutoUpdater {
         conn.setInstanceFollowRedirects(true);
         conn.setRequestProperty("Accept", "application/json");
         conn.setRequestProperty("User-Agent",
-                "anarchy-mc/" + plugin.getName() + "/" + currentVersion + " (https://modrinth.com/plugin/anarchyspawn)");
+                "anarchy-mc/" + plugin.getName() + "/" + currentVersion
+                        + " (https://modrinth.com/plugin/anarchyspawn)");
         return conn;
     }
 
@@ -432,6 +436,9 @@ public final class ModrinthAutoUpdater {
         }
     }
 
+    /**
+     * 安全提取正在运行的 Jar 文件对象（兼容 1.12.x 旧环境与重载环境）
+     */
     private File resolveRunningJarFile() {
         try {
             Method getFileMethod = JavaPlugin.class.getDeclaredMethod("getFile");
@@ -450,8 +457,10 @@ public final class ModrinthAutoUpdater {
     private File resolveUpdateFolder() {
         try {
             File folder = Bukkit.getUpdateFolderFile();
-            if (folder != null) return folder;
-        } catch (Throwable ignored) {}
+            if (folder != null)
+                return folder;
+        } catch (Throwable ignored) {
+        }
         return new File(plugin.getDataFolder().getParentFile(), "update");
     }
 
@@ -480,9 +489,12 @@ public final class ModrinthAutoUpdater {
 
         String qa = va[1];
         String qb = vb[1];
-        if (qa.isEmpty() && qb.isEmpty()) return 0;
-        if (qa.isEmpty()) return 1;
-        if (qb.isEmpty()) return -1;
+        if (qa.isEmpty() && qb.isEmpty())
+            return 0;
+        if (qa.isEmpty())
+            return 1;
+        if (qb.isEmpty())
+            return -1;
 
         int ra = qualifierRank(qa);
         int rb = qualifierRank(qb);
@@ -506,27 +518,34 @@ public final class ModrinthAutoUpdater {
     }
 
     private static int qualifierRank(String q) {
-        if (q.contains("snapshot") || q.contains("dev")) return 0;
-        if (q.contains("alpha")) return 1;
-        if (q.contains("beta")) return 2;
-        if (q.contains("pre") || q.contains("rc")) return 3;
+        if (q.contains("snapshot") || q.contains("dev"))
+            return 0;
+        if (q.contains("alpha"))
+            return 1;
+        if (q.contains("beta"))
+            return 2;
+        if (q.contains("pre") || q.contains("rc"))
+            return 3;
         return 4;
     }
 
     private static int leadingNumber(String s) {
         int i = 0;
-        while (i < s.length() && Character.isDigit(s.charAt(i))) i++;
+        while (i < s.length() && Character.isDigit(s.charAt(i)))
+            i++;
         return parseIntSafe(s.substring(0, i));
     }
 
     private static int trailingNumber(String s) {
         int i = s.length();
-        while (i > 0 && Character.isDigit(s.charAt(i - 1))) i--;
+        while (i > 0 && Character.isDigit(s.charAt(i - 1)))
+            i--;
         return parseIntSafe(s.substring(i));
     }
 
     private static int parseIntSafe(String s) {
-        if (s.isEmpty()) return 0;
+        if (s.isEmpty())
+            return 0;
         try {
             return Integer.parseInt(s);
         } catch (NumberFormatException e) {
@@ -562,10 +581,12 @@ public final class ModrinthAutoUpdater {
         JsonArray files = filesElement.getAsJsonArray();
         JsonObject fallback = null;
         for (JsonElement el : files) {
-            if (!el.isJsonObject()) continue;
+            if (!el.isJsonObject())
+                continue;
             JsonObject file = el.getAsJsonObject();
             String name = getString(file, "filename");
-            if (name == null || !name.toLowerCase(Locale.ROOT).endsWith(".jar")) continue;
+            if (name == null || !name.toLowerCase(Locale.ROOT).endsWith(".jar"))
+                continue;
             JsonElement primary = file.get("primary");
             if (primary != null && primary.isJsonPrimitive() && primary.getAsBoolean()) {
                 return file;

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 > 中文版请见 [CHANGELOG_Chinese.md](CHANGELOG_Chinese.md).
 
+## [1.1.3] - 2026-11-01
+
+### Changed
+- **Modrinth Auto-Updater Target File Naming (`ModrinthAutoUpdater`)**:
+  - The updater now preserves the release jar's original versioned file name (e.g. `AnarchySpawn-1.1.3.jar`) when saving downloads to `plugins/update/`.
+  - Added `{filename}` placeholder to updater notifications for clearer download targets.
+
 ## [1.1.2] - 2026-11-01
 
 ### Added
