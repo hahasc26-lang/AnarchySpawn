@@ -21,8 +21,31 @@ public class PlayerDeathListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
-        if (player != null && plugin.getDeathHotspotManager() != null && player.getLocation() != null && player.getLocation().getWorld() != null) {
+        if (player == null) {
+            return;
+        }
+
+        if (plugin.getDeathHotspotManager() != null && player.getLocation() != null && player.getLocation().getWorld() != null) {
             plugin.getDeathHotspotManager().recordDeath(player.getLocation());
+        }
+
+        // 提前预热复活缓存池：在玩家处于死亡界面等待点击重生的数秒时间窗口内，
+        // 预先保证目标世界的安全点缓冲池水位，杜绝玩家复活瞬间因缓存击穿而产生二次传送闪烁。
+        if (plugin.getConfigManager().isRespawnEnabled()
+                && plugin.getConfigManager().isCacheEnabled()
+                && player.hasPermission("anarchyspawn.use")
+                && (!plugin.getConfigManager().isRespectBypassPermission() || !player.hasPermission("anarchyspawn.bypass"))) {
+            org.bukkit.World currentWorld = player.getWorld();
+            if (currentWorld != null) {
+                String worldName = currentWorld.getName();
+                com.anarchy.spawn.config.WorldSpawnSettings settings = plugin.getConfigManager().getWorldSettings(worldName);
+                if (settings != null && settings.isEnabled()) {
+                    plugin.getCachePool().ensureSupply(worldName);
+                } else if (!org.bukkit.Bukkit.getWorlds().isEmpty()) {
+                    String defaultWorldName = org.bukkit.Bukkit.getWorlds().get(0).getName();
+                    plugin.getCachePool().ensureSupply(defaultWorldName);
+                }
+            }
         }
     }
 }

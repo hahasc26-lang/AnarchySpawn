@@ -84,11 +84,23 @@ public class PlayerDataUtils {
             return player.hasPlayedBefore();
         }
 
-        // 对于非默认主世界（如下界、末地或多世界插件创建的独立世界），仅检查该世界独立目录下的 playerdata
+        // 对于非默认主世界（如下界、末地或多世界插件创建的独立世界），优先检查该世界独立目录下的 playerdata
         String uuidStr = player.getUniqueId().toString();
         File worldDir = world.getWorldFolder();
-        return checkFileExists(new File(worldDir, "playerdata/" + uuidStr + ".dat"))
+        boolean hasIndependentData = checkFileExists(new File(worldDir, "playerdata/" + uuidStr + ".dat"))
                 || checkFileExists(new File(worldDir, "stats/" + uuidStr + ".json"));
+        if (hasIndependentData) {
+            return true;
+        }
+
+        // 若该世界自身未维护独立的 playerdata 目录（例如原版下界 DIM-1、末地 DIM1 均共用主世界统一 playerdata）
+        // 则降级检查服务器总存档中是否存在该玩家的历史数据，防止老玩家首次跨入下界/末地时被错误判定为新玩家
+        File playerdataDir = new File(worldDir, "playerdata");
+        if (!playerdataDir.exists() || !playerdataDir.isDirectory()) {
+            return hasExistingPlayerData(player, world);
+        }
+
+        return false;
     }
 
     private static boolean checkFileExists(File file) {

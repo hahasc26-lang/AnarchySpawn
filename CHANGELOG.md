@@ -7,11 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 > 中文版请见 [CHANGELOG_Chinese.md](CHANGELOG_Chinese.md).
 
-## [1.1.3] - 2026-11-01
+## [1.1.3] - 2026-11-06
+
+### Fixed
+- **Multi-World Unload Memory Leak Prevention (`LocationCachePool`)**:
+  - Refactored `CachedLocation` to eliminate direct strong references to `org.bukkit.Location` and `org.bukkit.World`. Cached points now store only primitive coordinates and world name strings, dynamically resolving `Bukkit.getWorld(worldName)` upon retrieval.
+  - Ensures uninstalled or dynamically unloaded worlds (e.g., via Multiverse-Core) can be fully garbage-collected by the JVM without leaving chunks or tile entities trapped in memory.
+- **Eliminated Respawn Cache-Miss Dual-Teleport Screen Flicker (`PlayerDeathListener` & `LocationCachePool`)**:
+  - Added proactive async cache pre-warming in `PlayerDeathListener`: immediately begins refilling the target world's cache pool while the player is waiting on the death screen.
+  - Drastically increases the cache-hit rate when `PlayerRespawnEvent` fires, allowing players to land natively at safe wilderness coordinates in 0ms without double-teleport tearing or interim fallback flickers.
+- **Async Teleportation & Player Disconnect Race Condition Guards (`TeleportService`)**:
+  - Hardened async callback chains across `teleportToRandomSpawn`, `searchAndTeleportAsync`, and protection expiry tasks with strict `player == null || !player.isOnline() || player.isDead()` pre-checks.
+  - Prevents packet dispatching, potion effect application, and title/actionbar rendering on inactive or disconnected entity references under Folia and Paper.
+- **Cross-World First-Join Nether/End Dimension False Positives (`PlayerDataUtils`)**:
+  - Enhanced `PlayerDataUtils.hasExistingWorldPlayerData()`: when target vanilla dimensions (Nether `DIM-1`, End `DIM1`) do not maintain independent `playerdata/` folders, the check automatically falls back to inspecting the server's global playerdata records.
+  - Prevents veteran players passing through Nether portals from being falsely flagged as new players and randomly displaced into the wilderness.
 
 ### Changed
+- **Simplified Configuration Schema (`config.yml` & `ConfigManager`)**:
+  - Removed redundant `auto-updater.project-id: "anarchyspawn"` from `config.yml`; internal defaults now automatically resolve the project slug safely, streamlining user configuration files.
 - **Modrinth Auto-Updater Target File Naming (`ModrinthAutoUpdater`)**:
-  - The updater now preserves the release jar's original versioned file name (e.g. `AnarchySpawn-1.1.3.jar`) when saving downloads to `plugins/update/`.
+  - The updater preserves the release jar's original versioned file name (e.g. `AnarchySpawn-1.1.3.jar`) when saving downloads to `plugins/update/`.
   - Added `{filename}` placeholder to updater notifications for clearer download targets.
 
 ## [1.1.2] - 2026-11-01

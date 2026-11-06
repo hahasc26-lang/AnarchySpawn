@@ -67,7 +67,12 @@ public class LocationCachePool {
             CachedLocation cached = queue.poll();
             if (cached != null && (now - cached.getTimestamp()) <= maxAgeMs) {
                 Location loc = cached.getLocation();
-                if (loc == null) {
+                if (loc == null || loc.getWorld() == null) {
+                    if (plugin.getConfigManager().isDebug()) {
+                        plugin.getLogger().info(String.format(
+                                "[CachePool] Discarded cached point in '%s' because the world is unloaded or invalid.",
+                                worldName));
+                    }
                     continue;
                 }
                 if (plugin.getDeathHotspotManager() != null &&
@@ -91,6 +96,31 @@ public class LocationCachePool {
             }
         }
         return null;
+    }
+
+    /**
+     * 主动保证指定世界的缓存水位。当缓存存量低于目标容量时，立即异步调度进行补满（如玩家死亡等待复活期间预热）。
+     *
+     * @param worldName 目标世界名
+     */
+    public void ensureSupply(String worldName) {
+        if (!isRunning || !plugin.getConfigManager().isCacheEnabled() || !plugin.isEnabled() || worldName == null) {
+            return;
+        }
+        WorldSpawnSettings settings = plugin.getConfigManager().getWorldSettings(worldName);
+        if (settings == null || !settings.isEnabled()) {
+            return;
+        }
+        World world = Bukkit.getWorld(settings.getWorldName());
+        if (world == null) {
+            return;
+        }
+        int targetSize = plugin.getConfigManager().getCacheTargetSize();
+        Queue<CachedLocation> queue = pool.get(worldName.toLowerCase());
+        int currentSize = queue != null ? queue.size() : 0;
+        if (currentSize < targetSize) {
+            FoliaScheduler.runForRegion(plugin, world, () -> refillWorld(worldName.toLowerCase(), settings, world, targetSize));
+        }
     }
 
     public int getCacheSize(String worldName) {
@@ -200,17 +230,62 @@ public class LocationCachePool {
         }
     }
 
+    /**
+     * 线程安全且对垃圾回收友好的缓存坐标载体。
+     * 绝不直接强引用 org.bukkit.World 或 org.bukkit.Location，杜绝多世界卸载时引起的严重地图内存泄漏。
+     */
     public static class CachedLocation {
-        private final Location location;
+        private final String worldName;
+        private final double x;
+        private final double y;
+        private final double z;
+        private final float yaw;
+        private final float pitch;
         private final long timestamp;
 
         public CachedLocation(Location location, long timestamp) {
-            this.location = location;
+            this.worldName = (location != null && location.getWorld() != null) ? location.getWorld().getName() : "";
+            this.x = location != null ? location.getX() : 0.0;
+            this.y = location != null ? location.getY() : 0.0;
+            this.z = location != null ? location.getZ() : 0.0;
+            this.yaw = location != null ? location.getYaw() : 0.0f;
+            this.pitch = location != null ? location.getPitch() : 0.0f;
             this.timestamp = timestamp;
         }
 
         public Location getLocation() {
-            return location;
+            if (worldName == null || worldName.isEmpty()) {
+                return null;
+            }
+            World world = Bukkit.getWorld(worldName);
+            if (world == null) {
+                return null;
+            }
+            return new Location(world, x, y, z, yaw, pitch);
+        }
+
+        public String getWorldName() {
+            return worldName;
+        }
+
+        public double getX() {
+            return x;
+        }
+
+        public double getY() {
+            return y;
+        }
+
+        public double getZ() {
+            return z;
+        }
+
+        public float getYaw() {
+            return yaw;
+        }
+
+        public float getPitch() {
+            return pitch;
         }
 
         public long getTimestamp() {

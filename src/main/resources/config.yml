@@ -273,9 +273,6 @@ auto-updater:
   # Master switch for update checking
   enabled: true
 
-  # Modrinth project slug or ID
-  project-id: "anarchyspawn"
-
   # Check for updates when the plugin starts
   check-on-startup: true
 

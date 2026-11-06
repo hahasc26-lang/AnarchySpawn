@@ -69,6 +69,9 @@ public class TeleportService {
                 PaperCompatibility.teleportPlayerAsync(player, finalCachedLoc).thenAccept(success -> {
                     if (success) {
                         FoliaScheduler.runForPlayer(plugin, player, () -> {
+                            if (player == null || !player.isOnline() || player.isDead()) {
+                                return;
+                            }
                             applyEffectsAndFeedback(player, finalCachedLoc, settings, isFirstJoin);
                         });
                         // 消耗了缓存点，触发后台异步补充
@@ -100,6 +103,9 @@ public class TeleportService {
                 PaperCompatibility.teleportPlayerAsync(player, targetLoc).thenAccept(success -> {
                     if (success) {
                         FoliaScheduler.runForPlayer(plugin, player, () -> {
+                            if (player == null || !player.isOnline() || player.isDead()) {
+                                return;
+                            }
                             applyEffectsAndFeedback(player, targetLoc, settings, isFirstJoin);
                             if (isFallback && plugin.getConfigManager().isClientFallbackWarningEnabled()
                                     && plugin.getMessageManager().hasMessage(player, "spawn.fallback-warning")) {
@@ -123,14 +129,19 @@ public class TeleportService {
     }
 
     public void applyPostRespawnEffects(Player player, Location location, WorldSpawnSettings settings) {
-        if (player == null || !player.isOnline() || location == null || settings == null)
+        if (player == null || !player.isOnline() || player.isDead() || location == null || settings == null)
             return;
-        FoliaScheduler.runForPlayer(plugin, player, () -> applyEffectsAndFeedback(player, location, settings, false));
+        FoliaScheduler.runForPlayer(plugin, player, () -> {
+            if (player == null || !player.isOnline() || player.isDead()) {
+                return;
+            }
+            applyEffectsAndFeedback(player, location, settings, false);
+        });
     }
 
     private void applyEffectsAndFeedback(Player player, Location location, WorldSpawnSettings settings,
             boolean isFirstJoin) {
-        if (player == null || !player.isOnline() || location == null || location.getWorld() == null)
+        if (player == null || !player.isOnline() || player.isDead() || location == null || location.getWorld() == null)
             return;
 
         if (plugin.getConfigManager().isTrackPerWorldPDC()) {
@@ -163,7 +174,7 @@ public class TeleportService {
                 }
                 activeProtectionSessions.remove(player.getUniqueId());
                 activeProtectionTasks.remove(player.getUniqueId());
-                if (player.isOnline()) {
+                if (player != null && player.isOnline() && !player.isDead()) {
                     try {
                         player.setInvulnerable(false);
                     } catch (Throwable ignored) {

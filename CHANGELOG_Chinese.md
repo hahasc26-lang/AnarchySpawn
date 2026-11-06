@@ -7,9 +7,25 @@
 
 > English version: [CHANGELOG.md](CHANGELOG.md).
 
-## [1.1.3] - 2026-11-01
+## [1.1.3] - 2026-11-06
+
+### 修复
+- **多世界卸载内存泄漏修复 (`LocationCachePool`)**：
+  - 重构 `CachedLocation` 实体，彻底移除对 `org.bukkit.Location` 与 `org.bukkit.World` 实例的强引用，改用基础数值坐标与世界名称字符串存储，出池时通过 `Bukkit.getWorld(worldName)` 动态构建。
+  - 确保被多世界管理插件（如 Multiverse-Core）动态热卸载的世界能够被 JVM 垃圾回收器完全回收，杜绝已卸载世界的成千上万区块与实体滞留常驻内存造成的严重泄漏。
+- **复活时缓存击穿与双重传送画面闪烁消除 (`PlayerDeathListener` & `LocationCachePool`)**：
+  - 在 `PlayerDeathListener` 中引入前置主动预热补仓逻辑：在玩家死亡并停留在死亡界面（点击“重生”按钮前）的数秒窗口期内，自动检查目标复活世界的缓存水位并在不足时主动异步发起补充。
+  - 大幅提升了玩家点击重生时 `PlayerRespawnEvent` 的安全点命中率，实现原生 0ms 瞬间落地，从根本上消除了未命中缓存时“先复活在备用点闪现数秒、再二次异步传送”引起的客户端画面撕裂与区块二次加载卡顿。
+- **异步传送回调与玩家离线竞态条件严密防护 (`TeleportService`)**：
+  - 强化了 `teleportToRandomSpawn`、`searchAndTeleportAsync` 及无敌保护结束等全链路异步回调，在切回玩家线程的闭包入口处严格前置 `player == null || !player.isOnline() || player.isDead()` 校验。
+  - 彻底杜绝在 Folia / Paper 高并发网络波动环境下向已断开连接或已失活的玩家实体分发药水、无敌状态及数据包引发的系统异常。
+- **原版下界/末地跨维度首次进入误判老玩家问题 (`PlayerDataUtils`)**：
+  - 优化 `PlayerDataUtils.hasExistingWorldPlayerData` 判定逻辑：针对原版单根存档架构（下界 DIM-1、末地 DIM1 均共用主世界统一 playerdata）中目标维度不存在独立 `playerdata` 目录的情况，自动平滑降级至服务器全局历史存档校验。
+  - 防止老玩家初次穿过下界门时被错误判定为新玩家并触发随机传送。
 
 ### 变更
+- **精简 Modrinth 自动更新配置项 (`config.yml` & `ConfigManager`)**：
+  - 从 `config.yml` 中删除了冗余的 `auto-updater.project-id: "anarchyspawn"` 配置项，代码层安全内建默认 Slug 常量，降低服主的配置与理解成本。
 - **自动更新目标文件名优化 (`ModrinthAutoUpdater`)**：
   - 自动更新下载文件现使用 Modrinth 发布的版本原文件名（如 `AnarchySpawn-1.1.3.jar`）保存至 `plugins/update/`，清晰直观地展示更新文件的新版本号与包名。
   - 自动更新提示中新增 `{filename}` 占位符支持。
